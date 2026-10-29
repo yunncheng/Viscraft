@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "kind": "build-plan",
+  "goal": "Build composition",
+  "project": {
+    "id": "project-64fc229ef14fdc41",
+    "revision": 3,
+    "title": "再等五分钟 · 总想拖延的云"
+  },
+  "buildable": true,
+  "simulatedOnly": false,
+  "timeline": {
+    "contentFrames": 1440,
+    "totalFrames": 1440,
+    "outputFrames": 1440,
+    "placements": 11,
+    "overlaps": [
+      {
+        "from": "place_0",
+        "to": "place_1",
+        "startFrame": 120,
+        "endFrame": 120,
+        "overlap": 0
+      },
+      {
+        "from": "place_1",
+        "to": "place_2",
+        "startFrame": 264,
+        "endFrame": 264,
+        "overlap": 0
+      },
+      {
+        "from": "place_2",
+        "to": "place_3",
+        "startFrame": 360,
+        "endFrame": 360,
+        "overlap": 0
+      },
+      {
+        "from": "place_3",
+        "to": "place_4",
+        "startFrame": 456,
+        "endFrame": 456,
+        "overlap": 0
+      },
+      {
+        "from": "place_4",
+        "to": "place_5",
+        "startFrame": 600,
+        "endFrame": 600,
+        "overlap": 0
+      },
+      {
+        "from": "place_5",
+        "to": "place_6",
+        "startFrame": 744,
+        "endFrame": 744,
+        "overlap": 0
+      },
+      {
+        "from": "place_6",
+        "to": "place_7",
+        "startFrame": 864,
+        "endFrame": 864,
+        "overlap": 0
+      },
+      {
+        "from": "place_7",
+        "to": "place_8",
+        "startFrame": 960,
+        "endFrame": 960,
+        "overlap": 0
+      },
+      {
+        "from": "place_8",
+        "to": "place_9",
+        "startFrame": 1056,
+        "endFrame": 1056,
+        "overlap": 0
+      },
+      {
+        "from": "place_9",
+        "to": "place_10",
+        "startFrame": 1272,
+        "endFrame": 1272,
+        "overlap": 0
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "cloud_01",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 120,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_02",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 144,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_03",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 96,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_04",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 96,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_05",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 144,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_06",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 144,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_07",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 120,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_08",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 96,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_09",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 96,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_10",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 216,
+      "carriesAudio": false
+    },
+    {
+      "id": "cloud_11",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 168,
+      "carriesAudio": false
+    },
+    {
+      "id": "original_score_and_foley",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "expectedFrames": 1440,
+      "carriesAudio": true
+    }
+  ],
+  "reuse": [
+    {
+      "subject": "cloud_01",
+      "take": "take-1e0d698e28e6bb5c91d913906d9ccc001a91d644",
+      "artifact": "artifact-bcae2a1556dc5787b3b9d54441b4a8035566fdaa",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_02",
+      "take": "take-863c9623a70f16c6185c3dd27e458360e0d35cc9",
+      "artifact": "artifact-fa30c005547337f333f388993308a488782a5b62",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_03",
+      "take": "take-fb43cf53f77c857d8857936027bb438b808080f0",
+      "artifact": "artifact-85f87062265deeba27a14f2be1e9ea1688d0ebdc",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_04",
+      "take": "take-665b45fd87c22bdf0c70458c15ed199104f617fb",
+      "artifact": "artifact-2f51f8395076d6f67948d741c8d1170dfaf69050",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_05",
+      "take": "take-2693c5b827ebe06d01624200f238a3d4b0729033",
+      "artifact": "artifact-23ca0483af604533b7f7f13a396da72365554e6e",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_06",
+      "take": "take-54b95e96c753ec5928637861a0b2536e4cce6c62",
+      "artifact": "artifact-9d3540f5fd444d63871778c6f46707857dd4a008",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_07",
+      "take": "take-e2d696e118a757544dcc27a2ac45327f7769aceb",
+      "artifact": "artifact-a1c2fac625a13c09bd854c4efde7cc68760332e7",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_09",
+      "take": "take-a27d523521fe3b889eea4445812c72447e8bd39f",
+      "artifact": "artifact-35a534e6c215bfe0aedbcfd115660711d87856a4",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_10",
+      "take": "take-6d9c030980750dffcd422eff2a41e33bd73d8e86",
+      "artifact": "artifact-132891a85f93f8ddb586bbc059161a4ff9115695",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "cloud_11",
+      "take": "take-1d5e5592b9788e4bbafcd13c4baee618b65eb589",
+      "artifact": "artifact-abe89d0d3efe47530e744daf9445d3a48fe02299",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    },
+    {
+      "subject": "original_score_and_foley",
+      "take": "take-6c7cdde25801bf548dff25f6ffff44aa1cde587a",
+      "artifact": "artifact-e9dc7ea38001bc3806d4c9782c17260b84274f90",
+      "note": "The current Source identity matches a reusable completed Build operation (identical operation key) and its artifact hash is verified; the Build will reuse it unless an input changes before it runs."
+    }
+  ],
+  "work": [
+    {
+      "subject": "cloud_08",
+      "kind": "browser",
+      "simulated": false,
+      "external": false,
+      "reason": "no matching reusable operation; would produce 96 frames"
+    }
+  ],
+  "changes": {
+    "sources": [
+      {
+        "id": "cloud_08",
+        "change": "modified",
+        "fields": [
+          "entry",
+          "resources"
+        ]
+      }
+    ],
+    "assets": [],
+    "shots": [],
+    "scenes": [],
+    "placements": [],
+    "layers": [],
+    "audio": [],
+    "subtitles": [],
+    "transitions": [],
+    "imageDocuments": [],
+    "imageTargets": [],
+    "worlds": [],
+    "bindings": [],
+    "looks": [],
+    "directionTransitions": [],
+    "composition": [],
+    "project": [],
+    "direction": [],
+    "files": [
+      {
+        "path": "author/courage.html",
+        "change": "added"
+      },
+      {
+        "path": "author/courage.js",
+        "change": "added"
+      }
+    ],
+    "counts": {
+      "added": 2,
+      "removed": 0,
+      "modified": 1
+    }
+  },
+  "identity": [],
+  "blockers": [],
+  "needsConfiguration": [],
+  "requiresApproval": [],
+  "unsupported": [],
+  "pending": [],
+  "notes": []
+}

@@ -1,0 +1,1324 @@
+{
+  "title": "框外的海 | Beyond the Frame",
+  "originalProject": {
+    "id": "project-01bb1a06487d1dd6",
+    "revision": 23,
+    "manifestSha256": "f9c6bd15df3aa1d44e76af7b07cc93d332b695f7c30e56392994493a7dc69e33"
+  },
+  "approvedBy": "Project owner selected output/continuity for inclusion as a complete Skill reference.",
+  "final": {
+    "build": "build-74b2cdcb-ca10-4e8f-b73d-0fb6fc009910",
+    "artifact": "artifact-8f656b9e891a47c9e46e6365df901f53f8bb99aa",
+    "sha256": "f8eab7e0ea3b72f9e88c25fa4e0deec33e0eecd40dd0e19bc7c220503e148a4c",
+    "frames": 600,
+    "fps": 24,
+    "simulated": false
+  },
+  "selectedGeneratedClips": [
+    {
+      "id": "shore-ride-footage",
+      "name": "shore-ride",
+      "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+      "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd",
+      "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+      "sourceKey": "9ed96f2895b125da3a67b4e03891ea04ec09459621bc5e2f8d6d3cdf629037cb",
+      "path": "assets/shore-ride.mp4",
+      "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+      "frames": 209,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false
+    },
+    {
+      "id": "homecoming-footage",
+      "name": "homecoming",
+      "build": "build-366c43d3-7b25-4bbb-9780-70cd4dbcd0fa",
+      "take": "take-baf4a51d7566a09eaa7aa3653b28005ba2e53206",
+      "artifact": "artifact-ea105ab448983c5f70dc0cd6391a9ead2766c518",
+      "sourceKey": "bd287d578b047546050acd0928101ba0114c8d6dfde0e71a7d506bad258e37d3",
+      "path": "assets/homecoming.mp4",
+      "sha256": "6ab89031511fe7e2cbc816e1a2f6737113ca334c47dd01197eb93b7386c69fc9",
+      "frames": 209,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false
+    }
+  ],
+  "originalAssetRecords": [
+    {
+      "id": "comic-pelican",
+      "revision": 1,
+      "path": "assets/comic-pelican.png",
+      "sha256": "e87a08dbb44dc314d621c17340393bf899d020c17dee82a048166c55fa6ecb7c",
+      "type": "image",
+      "rights": {
+        "origin": "Original image generated for this user brief with the host image_gen tool, 2026-10-20. Prompt retained in author/image-prompts.json.",
+        "license": "AI-generated production material supplied for this commissioned work; no third-party source media used.",
+        "redistributable": true
+      },
+      "simulated": false
+    },
+    {
+      "id": "coast-pelican",
+      "revision": 1,
+      "path": "assets/coast-pelican.png",
+      "sha256": "dce7c0f1de91fdfe413c5044f9e1269bd7720aef4504b3dbe01d743d5bc4cc28",
+      "type": "image",
+      "rights": {
+        "origin": "Original image generated for this user brief with the host image_gen tool, 2026-10-20. Prompt retained in author/image-prompts.json.",
+        "license": "AI-generated production material supplied for this commissioned work; no third-party source media used.",
+        "redistributable": true
+      },
+      "simulated": false
+    },
+    {
+      "id": "letterbox",
+      "revision": 1,
+      "path": "assets/letterbox.png",
+      "sha256": "ae8deb74deba319dc9d876b60597098d8aa533f2acdb89c253eea27e64a6bd3f",
+      "type": "image",
+      "rights": {
+        "origin": "Original solid-color cinema matte authored locally with FFmpeg for this film.",
+        "license": "Original production artwork.",
+        "redistributable": true
+      },
+      "simulated": false
+    },
+    {
+      "id": "painted-town",
+      "revision": 1,
+      "path": "assets/painted-town.png",
+      "sha256": "3cd747bb6c04b6e08b1a17797ef21da71a458fca25acd6a55914fc5413ff2cff",
+      "type": "image",
+      "rights": {
+        "origin": "Original environment-only painting generated with the built-in image_gen tool for this film, 2026-10-20. No input media uploaded.",
+        "license": "AI-generated production artwork for this commissioned film.",
+        "redistributable": true
+      },
+      "simulated": false
+    },
+    {
+      "id": "comic-world-anchor",
+      "revision": 1,
+      "path": "assets/comic-world-anchor.png",
+      "sha256": "68ba135fb7b4366b8a137041094146d56a882077fe4f0eb67b94b53698885e0a",
+      "type": "image",
+      "rights": {
+        "origin": "Actual native-code pelican scene captured at frame182 without the paper/gutter occlusion, preserving the full underlying world.",
+        "license": "Original authored animation plus AI-generated painted-town background for this work.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "inputs": [
+        {
+          "asset": "painted-town",
+          "revision": 1,
+          "sha256": "3cd747bb6c04b6e08b1a17797ef21da71a458fca25acd6a55914fc5413ff2cff",
+          "role": "unchanged underlying harbour and village layout"
+        }
+      ]
+    },
+    {
+      "id": "comic-world-motion",
+      "revision": 1,
+      "path": "assets/comic-world-motion.mp4",
+      "sha256": "8e7409d89fba8901f641e4a70ce43f9fd8f784013f9f32d44160a261f45c25d9",
+      "type": "video",
+      "rights": {
+        "origin": "Real native-code scene rendered through Runtime captureCode. A 97-frame side-tracking/pedaling guide in the exact comic harbour; visual appearance is superseded by the edited photographic anchor.",
+        "license": "Original procedural animation and generated painted-town background for this film.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "inputs": [
+        {
+          "asset": "painted-town",
+          "revision": 1,
+          "sha256": "3cd747bb6c04b6e08b1a17797ef21da71a458fca25acd6a55914fc5413ff2cff",
+          "role": "harbour, buildings, parapet and boats layout retained in code motion guide"
+        }
+      ]
+    },
+    {
+      "id": "photo-world-anchor",
+      "revision": 1,
+      "path": "assets/photo-world-anchor.png",
+      "sha256": "79ff2b92f5814a7df3c2edb403b3ef3266df253af1bab2b8244be9370c35476b",
+      "type": "image",
+      "rights": {
+        "origin": "Host image_gen edit of comic-world-anchor: same harbour, village, parapet, boats, mountain profile and cyclist/wheel placement converted to photographic sunset materials.",
+        "license": "AI-edited original production art for this commissioned film.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "inputs": [
+        {
+          "asset": "comic-world-anchor",
+          "revision": 1,
+          "sha256": "68ba135fb7b4366b8a137041094146d56a882077fe4f0eb67b94b53698885e0a",
+          "role": "strict scene geometry, landmarks and rider/bicycle layout, actual edit target"
+        }
+      ]
+    },
+    {
+      "id": "same-world-entry-f0",
+      "revision": 1,
+      "path": "assets/same-world-entry-f0-510ac32f8f9a0548.png",
+      "sha256": "510ac32f8f9a0548032519f3477b91a536c1e3f48282caca2f5af242b33cc7a5",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 0,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f1",
+      "revision": 1,
+      "path": "assets/same-world-entry-f1-eaa0d21b8e19056e.png",
+      "sha256": "eaa0d21b8e19056eddf86b0335c399df48858372bc9f8e6122e26f0ada3ca4bd",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 1,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f2",
+      "revision": 1,
+      "path": "assets/same-world-entry-f2-9e89797b3bd4f2d4.png",
+      "sha256": "9e89797b3bd4f2d4c430a9c881d70fae0e1941711a48939fa51c6a68013bec2b",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 2,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f3",
+      "revision": 1,
+      "path": "assets/same-world-entry-f3-ac6f1a8c3354110a.png",
+      "sha256": "ac6f1a8c3354110a3998a66c35a338d7da4af07eb9aae97ea49f40ff672413bc",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 3,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f4",
+      "revision": 1,
+      "path": "assets/same-world-entry-f4-874d2256024dbb78.png",
+      "sha256": "874d2256024dbb7839a2fc6b7e6c6a6fc8bacaec9d7f55b441a05f5c2bce4d95",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 4,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f5",
+      "revision": 1,
+      "path": "assets/same-world-entry-f5-b7ca3bcb735fea9b.png",
+      "sha256": "b7ca3bcb735fea9b3847cad647503160d862b92315cb6100e252d910ce4f77f4",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 5,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f6",
+      "revision": 1,
+      "path": "assets/same-world-entry-f6-0ec469204dfb5484.png",
+      "sha256": "0ec469204dfb5484d5843e010e83b02f6da21566ab941dea3c2e4df30ad242ba",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 6,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f7",
+      "revision": 1,
+      "path": "assets/same-world-entry-f7-a53a5e43f6811bc0.png",
+      "sha256": "a53a5e43f6811bc09a494558b106aa7db3ef4161dde4bab946c4c7d3d7a52e8c",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 7,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f8",
+      "revision": 1,
+      "path": "assets/same-world-entry-f8-66928f2624ef59c9.png",
+      "sha256": "66928f2624ef59c9547c07e2d5aa56d576988980ffb7ca671927bb41a8a16cfc",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 8,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f9",
+      "revision": 1,
+      "path": "assets/same-world-entry-f9-3a57f75e4af709ec.png",
+      "sha256": "3a57f75e4af709ec7139d7a73b08d4d313197757bf4c471d51d0ad3ba1c1db7b",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 9,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f10",
+      "revision": 1,
+      "path": "assets/same-world-entry-f10-e5196a259d06a1af.png",
+      "sha256": "e5196a259d06a1af822d5005656e1b869fededed60704f5df01f7239dfcbb282",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 10,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f11",
+      "revision": 1,
+      "path": "assets/same-world-entry-f11-92064de35b4138e0.png",
+      "sha256": "92064de35b4138e0163aead7c767eb38a6f9582992b37b38e2e904e0722d8a10",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 11,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f12",
+      "revision": 1,
+      "path": "assets/same-world-entry-f12-ce6e46fc599939cf.png",
+      "sha256": "ce6e46fc599939cfc11404386e663a5bad5c4877b0905bcdf3f349c2fb3559d6",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 12,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f13",
+      "revision": 1,
+      "path": "assets/same-world-entry-f13-fbef4115cb2eef64.png",
+      "sha256": "fbef4115cb2eef648b84dbd4743b00194d870ce1092c469595832129237c068c",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 13,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f14",
+      "revision": 1,
+      "path": "assets/same-world-entry-f14-d9dd4dbaf97de5b8.png",
+      "sha256": "d9dd4dbaf97de5b81fe01420eb8cf650ebd46aadcc1e1a266807d163cca419d2",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 14,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f15",
+      "revision": 1,
+      "path": "assets/same-world-entry-f15-300592653089fbdb.png",
+      "sha256": "300592653089fbdb73c8b76891009f864911a7f5b04a883e752bb70e0f734c36",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 15,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f16",
+      "revision": 1,
+      "path": "assets/same-world-entry-f16-5daf296b6b058d86.png",
+      "sha256": "5daf296b6b058d863c892a7a0fff50a23a5b8b757df2c93a4ce256f1ea398426",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 16,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f17",
+      "revision": 1,
+      "path": "assets/same-world-entry-f17-70d87004d0cbe43a.png",
+      "sha256": "70d87004d0cbe43a1c0a44f9298449611197684b8d58c7a8e5283ee0292ab711",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 17,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f18",
+      "revision": 1,
+      "path": "assets/same-world-entry-f18-3b04a442e52c6824.png",
+      "sha256": "3b04a442e52c682462f33ecc7f61585eaf2c71cc5912c31a1ec0f16fb779212c",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 18,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f19",
+      "revision": 1,
+      "path": "assets/same-world-entry-f19-37dc4be310f10eb0.png",
+      "sha256": "37dc4be310f10eb0fbf3141e609c59dd278c700616c7b42d1d7b2b4d1c97e3cc",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 19,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f20",
+      "revision": 1,
+      "path": "assets/same-world-entry-f20-8010e389e5f7fcd2.png",
+      "sha256": "8010e389e5f7fcd23e6890fb134116ece57f31e33f13fcf34615c04048d3ecc7",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 20,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f21",
+      "revision": 1,
+      "path": "assets/same-world-entry-f21-f96f1acbafe54faa.png",
+      "sha256": "f96f1acbafe54faa3c8e5daae5fdaf64a54688de7e61475e6f1bd5723c98ce68",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 21,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f22",
+      "revision": 1,
+      "path": "assets/same-world-entry-f22-104df1443c49383b.png",
+      "sha256": "104df1443c49383b65fbccb4c8ae15a2d2fa40b236f76392017a73f2948d1124",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 22,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f23",
+      "revision": 1,
+      "path": "assets/same-world-entry-f23-c41c189db886c63d.png",
+      "sha256": "c41c189db886c63d5d2ade0e8755ec128cc9648c7a3ff706fd01c7fd801ea786",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 23,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f24",
+      "revision": 1,
+      "path": "assets/same-world-entry-f24-86a4091ae8414645.png",
+      "sha256": "86a4091ae841464550529d704a9e5f57639bd941d678a1621ab5658abe9e4297",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 24,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f25",
+      "revision": 1,
+      "path": "assets/same-world-entry-f25-ba2180fcd77102bb.png",
+      "sha256": "ba2180fcd77102bb6f17f41ae27e89c73bf253eea337e3db76bb463cbf7939bb",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 25,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f26",
+      "revision": 1,
+      "path": "assets/same-world-entry-f26-8a7805abf445cbe7.png",
+      "sha256": "8a7805abf445cbe7d3568292b7241c53a24d3d6c1bc5dcafe9228f49808ce468",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 26,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f27",
+      "revision": 1,
+      "path": "assets/same-world-entry-f27-7e95ddcf4993f35a.png",
+      "sha256": "7e95ddcf4993f35acceabd85037742a842da822855566828412cf5838e778d51",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 27,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f28",
+      "revision": 1,
+      "path": "assets/same-world-entry-f28-7ec2fa754f8f392f.png",
+      "sha256": "7ec2fa754f8f392f817d48d37c834b4c2321d3527b4ae24524c23509e632ecbf",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 28,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f29",
+      "revision": 1,
+      "path": "assets/same-world-entry-f29-890aa6eb0c791532.png",
+      "sha256": "890aa6eb0c791532fa996c9e45e9fcf750cc3a3301cc09270879e77eae259075",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 29,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f30",
+      "revision": 1,
+      "path": "assets/same-world-entry-f30-157caed9dd08213c.png",
+      "sha256": "157caed9dd08213c1a0628f243578dde9bf9d1f712bf57871d293453bdd46fe9",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 30,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f31",
+      "revision": 1,
+      "path": "assets/same-world-entry-f31-b6b1e1553fbb4c07.png",
+      "sha256": "b6b1e1553fbb4c07193024af0da72b7476e2d53be46ad5b7079353c3d24f2ec8",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 31,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f32",
+      "revision": 1,
+      "path": "assets/same-world-entry-f32-bb779a1ff01ab89d.png",
+      "sha256": "bb779a1ff01ab89dd3b3b6b2763ec77903c9a08307831c05fcb0d9f07a53eb97",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 32,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "same-world-entry-f33",
+      "revision": 1,
+      "path": "assets/same-world-entry-f33-1176540faf6b8133.png",
+      "sha256": "1176540faf6b813312628a5a191d2114b1e3564acba35a438552dc5f82ed46ad",
+      "type": "image",
+      "rights": {
+        "origin": "Actual first34 frames of the reviewed same-world harbour ride Take; used in the native-code paper tear.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 33,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    },
+    {
+      "id": "harbour-ride-exit",
+      "revision": 1,
+      "path": "assets/harbour-ride-exit-09e6854dcc91c2d9.png",
+      "sha256": "09e6854dcc91c2d956a8f1261094acb6d2d3b7f5ebfafb8a01461be92dbbfa6a",
+      "type": "image",
+      "rights": {
+        "origin": "Last actual frame of the same-world harbour ride, for the spatially continuous ending.",
+        "license": "AI-generated commissioned footage.",
+        "redistributable": true
+      },
+      "simulated": false,
+      "derivedFrom": {
+        "kind": "frame",
+        "build": "build-c8f86c53-afc4-45c5-a160-cdb0f53e943f",
+        "artifact": "artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+        "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+        "frame": 208,
+        "take": "take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd"
+      }
+    }
+  ],
+  "retainedFiles": [
+    {
+      "path": "movie/final.mp4",
+      "sha256": "f8eab7e0ea3b72f9e88c25fa4e0deec33e0eecd40dd0e19bc7c220503e148a4c",
+      "originalPath": "output/continuity/movie/final.mp4",
+      "originalSha256": "f8eab7e0ea3b72f9e88c25fa4e0deec33e0eecd40dd0e19bc7c220503e148a4c"
+    },
+    {
+      "path": "project/author/comic.html",
+      "sha256": "b14e5456aa70928f3dde238e8d3733f9e7ce5b492935aa3482c29f1132275de2",
+      "originalPath": "output/continuity/project/author/comic.html",
+      "originalSha256": "b14e5456aa70928f3dde238e8d3733f9e7ce5b492935aa3482c29f1132275de2"
+    },
+    {
+      "path": "project/author/comic.mjs",
+      "sha256": "179cb97910529c67fbd273960b1cfde18133a1d83bd1143c6d7d130a3330fd82",
+      "originalPath": "output/continuity/project/author/comic.mjs",
+      "originalSha256": "179cb97910529c67fbd273960b1cfde18133a1d83bd1143c6d7d130a3330fd82"
+    },
+    {
+      "path": "project/author/sound.html",
+      "sha256": "3a402f745d772bb9d5717231b09a95416ed77e7bf0425084da8625807aee9954",
+      "originalPath": "output/continuity/project/author/sound.html",
+      "originalSha256": "3a402f745d772bb9d5717231b09a95416ed77e7bf0425084da8625807aee9954"
+    },
+    {
+      "path": "project/author/sound.mjs",
+      "sha256": "936e66d878d4ccfd4f1fa8ff1da1df3be62b3927de04f2121f3cf1858f86b7eb",
+      "originalPath": "output/continuity/project/author/sound.mjs",
+      "originalSha256": "a218cc79dc1fcff88862ee5f15f81eb222998cc4a30b012648df1c12b1a41086",
+      "adaptation": "Render argument/local length name frames -> samples; synthesis and timing unchanged."
+    },
+    {
+      "path": "project/assets/comic-pelican.png",
+      "sha256": "e87a08dbb44dc314d621c17340393bf899d020c17dee82a048166c55fa6ecb7c",
+      "originalPath": "output/continuity/project/assets/comic-pelican.png",
+      "originalSha256": "e87a08dbb44dc314d621c17340393bf899d020c17dee82a048166c55fa6ecb7c"
+    },
+    {
+      "path": "project/assets/coast-pelican.png",
+      "sha256": "dce7c0f1de91fdfe413c5044f9e1269bd7720aef4504b3dbe01d743d5bc4cc28",
+      "originalPath": "output/continuity/project/assets/coast-pelican.png",
+      "originalSha256": "dce7c0f1de91fdfe413c5044f9e1269bd7720aef4504b3dbe01d743d5bc4cc28"
+    },
+    {
+      "path": "project/assets/letterbox.png",
+      "sha256": "ae8deb74deba319dc9d876b60597098d8aa533f2acdb89c253eea27e64a6bd3f",
+      "originalPath": "output/continuity/project/assets/letterbox.png",
+      "originalSha256": "ae8deb74deba319dc9d876b60597098d8aa533f2acdb89c253eea27e64a6bd3f"
+    },
+    {
+      "path": "project/assets/painted-town.png",
+      "sha256": "3cd747bb6c04b6e08b1a17797ef21da71a458fca25acd6a55914fc5413ff2cff",
+      "originalPath": "output/continuity/project/assets/painted-town.png",
+      "originalSha256": "3cd747bb6c04b6e08b1a17797ef21da71a458fca25acd6a55914fc5413ff2cff"
+    },
+    {
+      "path": "project/assets/comic-world-anchor.png",
+      "sha256": "68ba135fb7b4366b8a137041094146d56a882077fe4f0eb67b94b53698885e0a",
+      "originalPath": "output/continuity/project/assets/comic-world-anchor.png",
+      "originalSha256": "68ba135fb7b4366b8a137041094146d56a882077fe4f0eb67b94b53698885e0a"
+    },
+    {
+      "path": "project/assets/comic-world-motion.mp4",
+      "sha256": "8e7409d89fba8901f641e4a70ce43f9fd8f784013f9f32d44160a261f45c25d9",
+      "originalPath": "output/continuity/project/assets/comic-world-motion.mp4",
+      "originalSha256": "8e7409d89fba8901f641e4a70ce43f9fd8f784013f9f32d44160a261f45c25d9"
+    },
+    {
+      "path": "project/assets/photo-world-anchor.png",
+      "sha256": "79ff2b92f5814a7df3c2edb403b3ef3266df253af1bab2b8244be9370c35476b",
+      "originalPath": "output/continuity/project/assets/photo-world-anchor.png",
+      "originalSha256": "79ff2b92f5814a7df3c2edb403b3ef3266df253af1bab2b8244be9370c35476b"
+    },
+    {
+      "path": "project/assets/same-world-entry-f0-510ac32f8f9a0548.png",
+      "sha256": "510ac32f8f9a0548032519f3477b91a536c1e3f48282caca2f5af242b33cc7a5",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f0-510ac32f8f9a0548.png",
+      "originalSha256": "510ac32f8f9a0548032519f3477b91a536c1e3f48282caca2f5af242b33cc7a5"
+    },
+    {
+      "path": "project/assets/same-world-entry-f1-eaa0d21b8e19056e.png",
+      "sha256": "eaa0d21b8e19056eddf86b0335c399df48858372bc9f8e6122e26f0ada3ca4bd",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f1-eaa0d21b8e19056e.png",
+      "originalSha256": "eaa0d21b8e19056eddf86b0335c399df48858372bc9f8e6122e26f0ada3ca4bd"
+    },
+    {
+      "path": "project/assets/same-world-entry-f2-9e89797b3bd4f2d4.png",
+      "sha256": "9e89797b3bd4f2d4c430a9c881d70fae0e1941711a48939fa51c6a68013bec2b",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f2-9e89797b3bd4f2d4.png",
+      "originalSha256": "9e89797b3bd4f2d4c430a9c881d70fae0e1941711a48939fa51c6a68013bec2b"
+    },
+    {
+      "path": "project/assets/same-world-entry-f3-ac6f1a8c3354110a.png",
+      "sha256": "ac6f1a8c3354110a3998a66c35a338d7da4af07eb9aae97ea49f40ff672413bc",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f3-ac6f1a8c3354110a.png",
+      "originalSha256": "ac6f1a8c3354110a3998a66c35a338d7da4af07eb9aae97ea49f40ff672413bc"
+    },
+    {
+      "path": "project/assets/same-world-entry-f4-874d2256024dbb78.png",
+      "sha256": "874d2256024dbb7839a2fc6b7e6c6a6fc8bacaec9d7f55b441a05f5c2bce4d95",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f4-874d2256024dbb78.png",
+      "originalSha256": "874d2256024dbb7839a2fc6b7e6c6a6fc8bacaec9d7f55b441a05f5c2bce4d95"
+    },
+    {
+      "path": "project/assets/same-world-entry-f5-b7ca3bcb735fea9b.png",
+      "sha256": "b7ca3bcb735fea9b3847cad647503160d862b92315cb6100e252d910ce4f77f4",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f5-b7ca3bcb735fea9b.png",
+      "originalSha256": "b7ca3bcb735fea9b3847cad647503160d862b92315cb6100e252d910ce4f77f4"
+    },
+    {
+      "path": "project/assets/same-world-entry-f6-0ec469204dfb5484.png",
+      "sha256": "0ec469204dfb5484d5843e010e83b02f6da21566ab941dea3c2e4df30ad242ba",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f6-0ec469204dfb5484.png",
+      "originalSha256": "0ec469204dfb5484d5843e010e83b02f6da21566ab941dea3c2e4df30ad242ba"
+    },
+    {
+      "path": "project/assets/same-world-entry-f7-a53a5e43f6811bc0.png",
+      "sha256": "a53a5e43f6811bc09a494558b106aa7db3ef4161dde4bab946c4c7d3d7a52e8c",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f7-a53a5e43f6811bc0.png",
+      "originalSha256": "a53a5e43f6811bc09a494558b106aa7db3ef4161dde4bab946c4c7d3d7a52e8c"
+    },
+    {
+      "path": "project/assets/same-world-entry-f8-66928f2624ef59c9.png",
+      "sha256": "66928f2624ef59c9547c07e2d5aa56d576988980ffb7ca671927bb41a8a16cfc",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f8-66928f2624ef59c9.png",
+      "originalSha256": "66928f2624ef59c9547c07e2d5aa56d576988980ffb7ca671927bb41a8a16cfc"
+    },
+    {
+      "path": "project/assets/same-world-entry-f9-3a57f75e4af709ec.png",
+      "sha256": "3a57f75e4af709ec7139d7a73b08d4d313197757bf4c471d51d0ad3ba1c1db7b",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f9-3a57f75e4af709ec.png",
+      "originalSha256": "3a57f75e4af709ec7139d7a73b08d4d313197757bf4c471d51d0ad3ba1c1db7b"
+    },
+    {
+      "path": "project/assets/same-world-entry-f10-e5196a259d06a1af.png",
+      "sha256": "e5196a259d06a1af822d5005656e1b869fededed60704f5df01f7239dfcbb282",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f10-e5196a259d06a1af.png",
+      "originalSha256": "e5196a259d06a1af822d5005656e1b869fededed60704f5df01f7239dfcbb282"
+    },
+    {
+      "path": "project/assets/same-world-entry-f11-92064de35b4138e0.png",
+      "sha256": "92064de35b4138e0163aead7c767eb38a6f9582992b37b38e2e904e0722d8a10",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f11-92064de35b4138e0.png",
+      "originalSha256": "92064de35b4138e0163aead7c767eb38a6f9582992b37b38e2e904e0722d8a10"
+    },
+    {
+      "path": "project/assets/same-world-entry-f12-ce6e46fc599939cf.png",
+      "sha256": "ce6e46fc599939cfc11404386e663a5bad5c4877b0905bcdf3f349c2fb3559d6",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f12-ce6e46fc599939cf.png",
+      "originalSha256": "ce6e46fc599939cfc11404386e663a5bad5c4877b0905bcdf3f349c2fb3559d6"
+    },
+    {
+      "path": "project/assets/same-world-entry-f13-fbef4115cb2eef64.png",
+      "sha256": "fbef4115cb2eef648b84dbd4743b00194d870ce1092c469595832129237c068c",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f13-fbef4115cb2eef64.png",
+      "originalSha256": "fbef4115cb2eef648b84dbd4743b00194d870ce1092c469595832129237c068c"
+    },
+    {
+      "path": "project/assets/same-world-entry-f14-d9dd4dbaf97de5b8.png",
+      "sha256": "d9dd4dbaf97de5b81fe01420eb8cf650ebd46aadcc1e1a266807d163cca419d2",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f14-d9dd4dbaf97de5b8.png",
+      "originalSha256": "d9dd4dbaf97de5b81fe01420eb8cf650ebd46aadcc1e1a266807d163cca419d2"
+    },
+    {
+      "path": "project/assets/same-world-entry-f15-300592653089fbdb.png",
+      "sha256": "300592653089fbdb73c8b76891009f864911a7f5b04a883e752bb70e0f734c36",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f15-300592653089fbdb.png",
+      "originalSha256": "300592653089fbdb73c8b76891009f864911a7f5b04a883e752bb70e0f734c36"
+    },
+    {
+      "path": "project/assets/same-world-entry-f16-5daf296b6b058d86.png",
+      "sha256": "5daf296b6b058d863c892a7a0fff50a23a5b8b757df2c93a4ce256f1ea398426",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f16-5daf296b6b058d86.png",
+      "originalSha256": "5daf296b6b058d863c892a7a0fff50a23a5b8b757df2c93a4ce256f1ea398426"
+    },
+    {
+      "path": "project/assets/same-world-entry-f17-70d87004d0cbe43a.png",
+      "sha256": "70d87004d0cbe43a1c0a44f9298449611197684b8d58c7a8e5283ee0292ab711",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f17-70d87004d0cbe43a.png",
+      "originalSha256": "70d87004d0cbe43a1c0a44f9298449611197684b8d58c7a8e5283ee0292ab711"
+    },
+    {
+      "path": "project/assets/same-world-entry-f18-3b04a442e52c6824.png",
+      "sha256": "3b04a442e52c682462f33ecc7f61585eaf2c71cc5912c31a1ec0f16fb779212c",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f18-3b04a442e52c6824.png",
+      "originalSha256": "3b04a442e52c682462f33ecc7f61585eaf2c71cc5912c31a1ec0f16fb779212c"
+    },
+    {
+      "path": "project/assets/same-world-entry-f19-37dc4be310f10eb0.png",
+      "sha256": "37dc4be310f10eb0fbf3141e609c59dd278c700616c7b42d1d7b2b4d1c97e3cc",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f19-37dc4be310f10eb0.png",
+      "originalSha256": "37dc4be310f10eb0fbf3141e609c59dd278c700616c7b42d1d7b2b4d1c97e3cc"
+    },
+    {
+      "path": "project/assets/same-world-entry-f20-8010e389e5f7fcd2.png",
+      "sha256": "8010e389e5f7fcd23e6890fb134116ece57f31e33f13fcf34615c04048d3ecc7",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f20-8010e389e5f7fcd2.png",
+      "originalSha256": "8010e389e5f7fcd23e6890fb134116ece57f31e33f13fcf34615c04048d3ecc7"
+    },
+    {
+      "path": "project/assets/same-world-entry-f21-f96f1acbafe54faa.png",
+      "sha256": "f96f1acbafe54faa3c8e5daae5fdaf64a54688de7e61475e6f1bd5723c98ce68",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f21-f96f1acbafe54faa.png",
+      "originalSha256": "f96f1acbafe54faa3c8e5daae5fdaf64a54688de7e61475e6f1bd5723c98ce68"
+    },
+    {
+      "path": "project/assets/same-world-entry-f22-104df1443c49383b.png",
+      "sha256": "104df1443c49383b65fbccb4c8ae15a2d2fa40b236f76392017a73f2948d1124",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f22-104df1443c49383b.png",
+      "originalSha256": "104df1443c49383b65fbccb4c8ae15a2d2fa40b236f76392017a73f2948d1124"
+    },
+    {
+      "path": "project/assets/same-world-entry-f23-c41c189db886c63d.png",
+      "sha256": "c41c189db886c63d5d2ade0e8755ec128cc9648c7a3ff706fd01c7fd801ea786",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f23-c41c189db886c63d.png",
+      "originalSha256": "c41c189db886c63d5d2ade0e8755ec128cc9648c7a3ff706fd01c7fd801ea786"
+    },
+    {
+      "path": "project/assets/same-world-entry-f24-86a4091ae8414645.png",
+      "sha256": "86a4091ae841464550529d704a9e5f57639bd941d678a1621ab5658abe9e4297",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f24-86a4091ae8414645.png",
+      "originalSha256": "86a4091ae841464550529d704a9e5f57639bd941d678a1621ab5658abe9e4297"
+    },
+    {
+      "path": "project/assets/same-world-entry-f25-ba2180fcd77102bb.png",
+      "sha256": "ba2180fcd77102bb6f17f41ae27e89c73bf253eea337e3db76bb463cbf7939bb",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f25-ba2180fcd77102bb.png",
+      "originalSha256": "ba2180fcd77102bb6f17f41ae27e89c73bf253eea337e3db76bb463cbf7939bb"
+    },
+    {
+      "path": "project/assets/same-world-entry-f26-8a7805abf445cbe7.png",
+      "sha256": "8a7805abf445cbe7d3568292b7241c53a24d3d6c1bc5dcafe9228f49808ce468",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f26-8a7805abf445cbe7.png",
+      "originalSha256": "8a7805abf445cbe7d3568292b7241c53a24d3d6c1bc5dcafe9228f49808ce468"
+    },
+    {
+      "path": "project/assets/same-world-entry-f27-7e95ddcf4993f35a.png",
+      "sha256": "7e95ddcf4993f35acceabd85037742a842da822855566828412cf5838e778d51",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f27-7e95ddcf4993f35a.png",
+      "originalSha256": "7e95ddcf4993f35acceabd85037742a842da822855566828412cf5838e778d51"
+    },
+    {
+      "path": "project/assets/same-world-entry-f28-7ec2fa754f8f392f.png",
+      "sha256": "7ec2fa754f8f392f817d48d37c834b4c2321d3527b4ae24524c23509e632ecbf",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f28-7ec2fa754f8f392f.png",
+      "originalSha256": "7ec2fa754f8f392f817d48d37c834b4c2321d3527b4ae24524c23509e632ecbf"
+    },
+    {
+      "path": "project/assets/same-world-entry-f29-890aa6eb0c791532.png",
+      "sha256": "890aa6eb0c791532fa996c9e45e9fcf750cc3a3301cc09270879e77eae259075",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f29-890aa6eb0c791532.png",
+      "originalSha256": "890aa6eb0c791532fa996c9e45e9fcf750cc3a3301cc09270879e77eae259075"
+    },
+    {
+      "path": "project/assets/same-world-entry-f30-157caed9dd08213c.png",
+      "sha256": "157caed9dd08213c1a0628f243578dde9bf9d1f712bf57871d293453bdd46fe9",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f30-157caed9dd08213c.png",
+      "originalSha256": "157caed9dd08213c1a0628f243578dde9bf9d1f712bf57871d293453bdd46fe9"
+    },
+    {
+      "path": "project/assets/same-world-entry-f31-b6b1e1553fbb4c07.png",
+      "sha256": "b6b1e1553fbb4c07193024af0da72b7476e2d53be46ad5b7079353c3d24f2ec8",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f31-b6b1e1553fbb4c07.png",
+      "originalSha256": "b6b1e1553fbb4c07193024af0da72b7476e2d53be46ad5b7079353c3d24f2ec8"
+    },
+    {
+      "path": "project/assets/same-world-entry-f32-bb779a1ff01ab89d.png",
+      "sha256": "bb779a1ff01ab89dd3b3b6b2763ec77903c9a08307831c05fcb0d9f07a53eb97",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f32-bb779a1ff01ab89d.png",
+      "originalSha256": "bb779a1ff01ab89dd3b3b6b2763ec77903c9a08307831c05fcb0d9f07a53eb97"
+    },
+    {
+      "path": "project/assets/same-world-entry-f33-1176540faf6b8133.png",
+      "sha256": "1176540faf6b813312628a5a191d2114b1e3564acba35a438552dc5f82ed46ad",
+      "originalPath": "output/continuity/project/assets/same-world-entry-f33-1176540faf6b8133.png",
+      "originalSha256": "1176540faf6b813312628a5a191d2114b1e3564acba35a438552dc5f82ed46ad"
+    },
+    {
+      "path": "project/assets/harbour-ride-exit-09e6854dcc91c2d9.png",
+      "sha256": "09e6854dcc91c2d956a8f1261094acb6d2d3b7f5ebfafb8a01461be92dbbfa6a",
+      "originalPath": "output/continuity/project/assets/harbour-ride-exit-09e6854dcc91c2d9.png",
+      "originalSha256": "09e6854dcc91c2d956a8f1261094acb6d2d3b7f5ebfafb8a01461be92dbbfa6a"
+    },
+    {
+      "path": "project/assets/shore-ride.mp4",
+      "sha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4",
+      "originalPath": "output/continuity/project/.viscraft/artifacts/artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e.mp4",
+      "originalSha256": "97f8c5fc40dce11b0eef9bf8a5edcf1ff5a2573a918ace29b0164c3d0c8965c4"
+    },
+    {
+      "path": "project/assets/homecoming.mp4",
+      "sha256": "6ab89031511fe7e2cbc816e1a2f6737113ca334c47dd01197eb93b7386c69fc9",
+      "originalPath": "output/continuity/project/.viscraft/artifacts/artifact-ea105ab448983c5f70dc0cd6391a9ead2766c518.mp4",
+      "originalSha256": "6ab89031511fe7e2cbc816e1a2f6737113ca334c47dd01197eb93b7386c69fc9"
+    },
+    {
+      "path": "review/world-comparison.png",
+      "sha256": "3080024fe766683604d3b61fbf78ae0a3e61dd88496bf3bbe86243f0a662277d",
+      "originalPath": "review/continuity/world-comparison.png",
+      "originalSha256": "3080024fe766683604d3b61fbf78ae0a3e61dd88496bf3bbe86243f0a662277d"
+    },
+    {
+      "path": "review/composed-tear-grid.jpg",
+      "sha256": "9f9098a88ccba2bffa3069cbae3f35c171628ce141d91855f873bbf44e3c5be1",
+      "originalPath": "review/continuity/composed-tear-grid.jpg",
+      "originalSha256": "9f9098a88ccba2bffa3069cbae3f35c171628ce141d91855f873bbf44e3c5be1"
+    },
+    {
+      "path": "review/final-ending-grid.jpg",
+      "sha256": "c0b402699afe100a2ce0c136eb47f1ee986d1f6a1d7d64f11624fca74c550f02",
+      "originalPath": "review/continuity/final-ending-grid.jpg",
+      "originalSha256": "c0b402699afe100a2ce0c136eb47f1ee986d1f6a1d7d64f11624fca74c550f02"
+    },
+    {
+      "path": "review/final-tear-grid.jpg",
+      "sha256": "d9d7627fe8a84d071b98a4513b9601cefe6197494a28f873aed59cc2c9fe01c3",
+      "originalPath": "review/continuity/final-tear-grid.jpg",
+      "originalSha256": "d9d7627fe8a84d071b98a4513b9601cefe6197494a28f873aed59cc2c9fe01c3"
+    },
+    {
+      "path": "review/home-contact.jpg",
+      "sha256": "039f023029b5af709c391ad736ff46d15736df009f48e143657ffca137edd641",
+      "originalPath": "review/continuity/home-contact.jpg",
+      "originalSha256": "039f023029b5af709c391ad736ff46d15736df009f48e143657ffca137edd641"
+    },
+    {
+      "path": "review/home-stop-flock.jpg",
+      "sha256": "2ab0b59fd5c51e8ee138a5c4b845a0b524f1711473e5c1158aba20bed41e8b80",
+      "originalPath": "review/continuity/home-stop-flock.jpg",
+      "originalSha256": "2ab0b59fd5c51e8ee138a5c4b845a0b524f1711473e5c1158aba20bed41e8b80"
+    },
+    {
+      "path": "review/motion-guide-grid.jpg",
+      "sha256": "c94127b7e06272a0f7ecc57059c67ca4dbe8a529bfd34d18165b86cfad6bd680",
+      "originalPath": "review/continuity/motion-guide-grid.jpg",
+      "originalSha256": "c94127b7e06272a0f7ecc57059c67ca4dbe8a529bfd34d18165b86cfad6bd680"
+    },
+    {
+      "path": "review/ride-contact.jpg",
+      "sha256": "21005bbbefc3dbff4ef96b7d725312f33fc9332809feda47db5614f83a937d97",
+      "originalPath": "review/continuity/ride-contact.jpg",
+      "originalSha256": "21005bbbefc3dbff4ef96b7d725312f33fc9332809feda47db5614f83a937d97"
+    },
+    {
+      "path": "review/ride-opening.jpg",
+      "sha256": "f432f389aad4700c6c28e04ddc077ae4ac3a184168a677ab2c7959b7c79d13b7",
+      "originalPath": "review/continuity/ride-opening.jpg",
+      "originalSha256": "f432f389aad4700c6c28e04ddc077ae4ac3a184168a677ab2c7959b7c79d13b7"
+    },
+    {
+      "path": "review/anchor-review.json",
+      "sha256": "e88b17dfbba249e7a682335814e978bf50774feb49f1f513d2f0c28501f7f7b4",
+      "originalPath": "review/continuity/anchor-review.json",
+      "originalSha256": "e88b17dfbba249e7a682335814e978bf50774feb49f1f513d2f0c28501f7f7b4"
+    },
+    {
+      "path": "review/ride-review.json",
+      "sha256": "09501f241299aa1f6d35e23572374fea31565367480bc014f64d1fed1fe5c8be",
+      "originalPath": "review/continuity/ride-review.json",
+      "originalSha256": "09501f241299aa1f6d35e23572374fea31565367480bc014f64d1fed1fe5c8be"
+    },
+    {
+      "path": "review/home-review.json",
+      "sha256": "01f69293cd45f46521f1055c58bb7a03cc344b0dedff26efa740ae979b6efd15",
+      "originalPath": "review/continuity/home-review.json",
+      "originalSha256": "01f69293cd45f46521f1055c58bb7a03cc344b0dedff26efa740ae979b6efd15"
+    },
+    {
+      "path": "review/final-validation.json",
+      "sha256": "8007685558ef31e5f7c880cc90a3fb84c2f1608c3fd8405549bf1c673a2200fb",
+      "originalPath": "review/continuity/final-validation.json",
+      "originalSha256": "8007685558ef31e5f7c880cc90a3fb84c2f1608c3fd8405549bf1c673a2200fb"
+    },
+    {
+      "path": "review/final-frame-hashes.txt",
+      "sha256": "be8d20e3970f8bcaa9a9f608d20836591c9d79f93afc74ad1937f415d3ecfbe0",
+      "originalPath": "review/continuity/final-frame-hashes.txt",
+      "originalSha256": "be8d20e3970f8bcaa9a9f608d20836591c9d79f93afc74ad1937f415d3ecfbe0"
+    },
+    {
+      "path": "project/production/planning-image-prompts.json",
+      "sha256": "9963455bb62e185e8d7c36da989dfdca8fcb8b0592d52924b96cede46c907730",
+      "originalPath": "output/continuity/project/author/image-prompts.json",
+      "originalSha256": "9963455bb62e185e8d7c36da989dfdca8fcb8b0592d52924b96cede46c907730"
+    },
+    {
+      "path": "project/production/background-prompt.json",
+      "sha256": "c225a3c260a3c932ea7ca557405d91f148f92ecf168c1847c1f4f84f15d70367",
+      "originalPath": "output/continuity/project/author/background-prompt.json",
+      "originalSha256": "c225a3c260a3c932ea7ca557405d91f148f92ecf168c1847c1f4f84f15d70367"
+    },
+    {
+      "path": "project/production/image-edit.json",
+      "sha256": "2ab89d8ffeb2fd911f7f59bd964cd1de91fb9ef1799bb71792114c5de5f0f4cc",
+      "originalPath": "output/continuity/project/author/continuity/image-edit.json",
+      "originalSha256": "2ab89d8ffeb2fd911f7f59bd964cd1de91fb9ef1799bb71792114c5de5f0f4cc"
+    }
+  ],
+  "rawProviderDeliveries": [
+    {
+      "originalPath": "output/continuity/project/.viscraft/provider-media/video-api-shore-ride.same-world-ride-v1.mp4",
+      "sha256": "389e7a3499e5f59285c2e485e4615356716794c4bee59e6d0fae9b3f583a9b7f",
+      "bytes": 21286840,
+      "included": false,
+      "reason": "Duplicate provider delivery; selected normalized footage is included. Original remains in the owner archive."
+    },
+    {
+      "originalPath": "output/continuity/project/.viscraft/provider-media/video-api-homecoming.same-world-home-v1.mp4",
+      "sha256": "4733cf95032065b874b257d897e5e8f050284b5b5d9ba1db7f7eeefd23c5e480",
+      "bytes": 16254641,
+      "included": false,
+      "reason": "Duplicate provider delivery; selected normalized footage is included. Original remains in the owner archive."
+    }
+  ],
+  "packaging": "Curated handoff: approved movie, current-contract editable Project and original review evidence. Selected footage is imported as Assets. Original Build/Take/job IDs are documentary evidence, not live production state.",
+  "distributionLicense": {
+    "license": "Apache-2.0",
+    "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "scope": "Viscraft-owned code, documentation and case media; third-party material retains its stated terms. Original production provenance is unchanged."
+  }
+}

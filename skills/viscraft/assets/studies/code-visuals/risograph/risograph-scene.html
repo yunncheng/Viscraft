@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Risograph ride — three-plate separation animation</title>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #f6f1e6; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="riso"></canvas>
+<script type="module">
+// Viscraft Browser contract: `render(ctx)` is called once per frame, in order,
+// with the output size, frame index, time, fps, seed and params. The scene owns
+// the packed RGB separation plate and the WebGL2 printer. No wall clock, no
+// unseeded randomness, no fonts, no external requests.
+import { renderRiso } from './scene.mjs';
+
+const canvas = document.getElementById('riso');
+window.viscraft = {
+  ready() {
+    return Promise.resolve();
+  },
+  render(ctx) {
+    renderRiso(canvas, ctx);
+  },
+};
+</script>
+</body>
+</html>

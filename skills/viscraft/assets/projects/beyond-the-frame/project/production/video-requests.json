@@ -1,0 +1,52 @@
+[
+  {
+    "id": "shore-ride",
+    "model": "MiniMax-H3",
+    "prompt": "subject_definitions: <Subject 1> is the one white pelican riding the teal step-through bicycle in <Picture 1>. <Environment 1> is the SPECIFIC photographed Mediterranean harbour in <Picture 1>: buff limestone parapet directly behind the bicycle, ochre stone promenade, turquoise harbour, cream sailboats, coral and yellow houses with teal shutters on the opposite right bank, a bell tower and wooded hills, and a blue-green mountain ridge. <Video 1> is a native-code motion/layout guide for the same pelican cyclist and SAME harbour. Its illustrated surfaces must be replaced by the photographic materials of <Picture 1>.\nsummary: [reference generation] Animate the exact photographic incarnation of this illustrated world. Preserve the real harbour geography and recognizable objects while the pelican cycles rightward. The transition is already handled outside this clip; this entire video is photographic from its first frame.\nretention_analysis: <Subject 1> (appears in [Shot 1]): partially_preserved - preserve the identity, pose family, long peach-orange bill and pouch, fluffy white crest, gray wing tips, orange webbed feet, teal bicycle with cream tires and brown saddle, and approximate picture positions from <Picture 1>. <Environment 1> (appears in [Shot 1]): strongly_preserved - preserve the actual buildings, tower, parapet, sailboats, mountain profile, waterline and camera side-view arrangement, not merely a similar palette. <Video 1>: partially_preserved - retain forward pedaling, rolling wheels, steady side-tracking camera, complete cyclist framing and direction; discard all flat color fills, ink outlines and painted textures. <Picture 1> is the sole material/lighting/appearance authority. The video reference is motion guidance, never a request to output cartoons.\ndetailed_description: [Shot 1] At 00:00.000 establish the full pelican and bicycle in the exact side-view photographic harbour layout of <Picture 1>, facing right, with the nearby limestone wall, boats and detailed waterfront village plainly visible and spatially coherent. Keep the rider at the same approximate image position and scale, both wheel contact points on the ochre promenade. For the first four seconds track alongside the already moving cyclist, maintaining the same physical camera and geography. Natural feather barbs ripple in the sea breeze; webbed feet alternate on the pedals; spokes and tires rotate as it travels forward. Sunlight is warm gold from the upper-left side as in the photograph. At 00:03.000 the front wheel rolls through one tiny rain puddle on the stone path, flicking a few small droplets, while the real harbour still remains visible behind the wall. From 00:04.000 to 00:06.500, forward side-tracking gradually carries the village, tower and sailboats toward the left background through real parallax; nothing vanishes or transforms. The path approaches the natural end of the low parapet at the edge of the same village's sheltered cove. From 00:06.500 to 00:08.700 the wall ends and a short sloping stone-to-sand approach beside it becomes visible. The cyclist gently rolls onto damp firm beach sand next to the cove; the last portion of stone wall and the colourful village remain visible behind and to the left, with open golden water beginning to occupy more of the view. End still moving slowly rightward with both wheels grounded, ready to stop. One uninterrupted shot. No cuts, no teleporting geography, no replacement by unrelated cliffs, no cycling through the wall, no jumping into the harbour, no illustration, no text.\noverall_soundscape: Gentle harbour water, faint coastal wind, bicycle chain ticks, quiet tire rolling on stone, one tiny puddle splash, then a softer wet-sand tire hiss. No dialogue or vocals.\nnon_diegetic_music: N/A",
+    "mode": "reference",
+    "references": [
+      {
+        "asset": "photo-world-anchor",
+        "category": "image",
+        "role": "composition"
+      },
+      {
+        "asset": "comic-world-motion",
+        "category": "video",
+        "role": "motion"
+      }
+    ],
+    "requestedFrames": 209,
+    "size": "1344:768",
+    "fps": 24,
+    "steps": 30,
+    "seed": 7184,
+    "serviceProtocol": "videos-v1",
+    "purpose": "Original production request evidence; not an executable recipe or proof of strict first-frame conditioning."
+  },
+  {
+    "id": "homecoming",
+    "model": "MiniMax-H3",
+    "prompt": "subject_definitions: <Subject 1> is the white pelican and teal step-through bicycle in <Picture 1> and <Picture 2>. <Picture 1> is the ACTUAL final frame of the immediately preceding ride and defines the current physical location, rider pose, camera, shore, nearby stone wall, village and water. <Picture 2> is the photographic rendering of the original comic harbour, defining the persistent landmarks and natural feather/bicycle identity. The same place must remain geographically coherent.\nsummary: [reference generation] Continue from the actual previous-shot state into a gentle stop and quiet belonging at the water's edge. Keep the harbour and village recognizably connected as the camera opens to the sea; do not invent a replacement coast.\nretention_analysis: <Subject 1> (appears in [Shot 1]): strongly_preserved - retain the white pelican with peach-orange long bill and pouch, fluffy crest, gray wing tips, orange feet, and teal cream-tire bicycle from the photographs. <Picture 1>: strongly_preserved - start from its actual framing, coastline, stonework, horizon, sunlight direction, mountains and subject pose. <Picture 2>: partially_preserved - retain the defining harbour village, tower, cream sailboats and buff parapet in the same physical world; their screen positions may change only through continuous motivated camera movement, and distant architecture can recede into the left background.\ndetailed_description: [Shot 1] At 00:00.000 <Subject 1> continues moving slowly rightward from the exact environment and near-side/rear-three-quarter viewpoint of <Picture 1>. The same village and low stone wall remain visible to the left or behind, with the adjoining sheltered cove and warm sea opening ahead. During the first two seconds the pelican stops pedaling and smoothly decelerates. By 00:02.800 both wheels are still; it lowers one webbed foot to the firm damp ground beside the bicycle to balance, with its wings gently resting on the handlebars. No further forward cycling after the stop. From 00:03.000 the pelican turns its bill and gaze toward the open water; five distant natural pelicans with long beaks and broad wings glide across the golden horizon from left to right. Their passage is small in the landscape, not a close flyby. From 00:04.000 to 00:08.700 the camera very slowly retreats and rises, leaving the stopped cyclist a small warm-rim-lit figure in the lower third and revealing a broad quiet sea. Preserve a recognizable sliver of the original village/harbour architecture, stone parapet terminus or sailboats at the far-left edge as a link to the starting place. Keep the late golden sunlight entering from the LEFT, including amber rim light on white feathers and sand. The cove water can remain blue with warm glints as in the actual preceding frame; do not insert a new sun on the right or reverse the light direction. Sunlight and mountain geography remain consistent; the environment never morphs, dissolves or teleports. Fine feathers and gentle water move naturally. End on a tender spacious golden coastal vista, no text and no inserted internal fade. One continuous cinematic shot.\noverall_soundscape: Gentle nearby waves and soft coastal wind; chain clicks slow and stop with the bicycle. Tiny distant seabird calls. No speech or vocals.\nnon_diegetic_music: N/A",
+    "mode": "reference",
+    "references": [
+      {
+        "asset": "harbour-ride-exit",
+        "category": "image",
+        "role": "composition"
+      },
+      {
+        "asset": "photo-world-anchor",
+        "category": "image",
+        "role": "identity"
+      }
+    ],
+    "requestedFrames": 209,
+    "size": "1344:768",
+    "fps": 24,
+    "steps": 30,
+    "seed": 7185,
+    "serviceProtocol": "videos-v1",
+    "purpose": "Original production request evidence; not an executable recipe or proof of strict first-frame conditioning."
+  }
+]

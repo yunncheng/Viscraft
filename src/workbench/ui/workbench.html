@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Viscraft workbench</title>
+<link rel="stylesheet" href="./workbench.css">
+</head>
+<body>
+<div class="wb-app" id="wb-app" data-phase="loading">
+  <header class="wb-bar">
+    <div class="wb-doc">
+      <span class="wb-mark"><span class="wb-emblem" aria-hidden="true">V</span><span class="wb-wordmark">Viscraft</span></span>
+      <span class="wb-title" id="wb-title">Loading design…</span>
+      <span class="wb-path" id="wb-path"></span>
+    </div>
+    <div class="wb-actions">
+      <span class="wb-save" id="wb-save-state" data-state="clean" role="status" aria-live="polite">
+        <i></i><span id="wb-save-label">Ready</span>
+      </span>
+      <button class="wb-btn" id="wb-explode" type="button" aria-pressed="false" disabled>View layers</button>
+      <span class="wb-action-divider" aria-hidden="true"></span>
+      <button class="wb-btn" id="wb-save" type="button" disabled title="Save the editable design">Save changes</button>
+      <button class="wb-btn primary" id="wb-export" type="button" disabled title="Save, render and download the current image">Export image <span aria-hidden="true">↗</span></button>
+    </div>
+  </header>
+
+  <div class="wb-banners" id="wb-banners" role="status" aria-live="polite"></div>
+
+  <main class="wb-stage" id="wb-stage">
+    <iframe id="wb-frame" title="Design canvas"></iframe>
+    <div class="wb-overlay" id="wb-overlay">
+      <div class="wb-card">
+        <p class="wb-card-title" id="wb-overlay-title">Loading design…</p>
+        <p class="wb-card-text" id="wb-overlay-text">Reading the author source from the Runtime.</p>
+        <button class="wb-btn" id="wb-overlay-action" type="button" hidden></button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="wb-output">
+    <div class="wb-target" id="wb-target" hidden></div>
+    <span class="wb-out-state" id="wb-out-state" data-state="not-rendered" role="status" aria-live="polite">Not rendered</span>
+    <span class="wb-out-detail" id="wb-out-detail">No output for this target yet.</span>
+    <button class="wb-btn small quiet" id="wb-render" type="button" disabled>Render preview</button>
+    <a class="wb-btn small quiet" id="wb-download" href="#" hidden download>Last rendered image</a>
+  </footer>
+</div>
+<script src="./layout-record.js"></script>
+<script src="./workbench.js"></script>
+</body>
+</html>

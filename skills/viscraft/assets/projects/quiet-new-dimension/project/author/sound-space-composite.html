@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="UTF-8"><style>html,body{margin:0;overflow:hidden;background:#000}canvas{display:block}video,img{display:none}</style></head><body><img id="plate" src="../assets/space-jpeg/0000.jpg"><img id="reference" src="../assets/product-reference.png"><canvas id="c"></canvas><script>
+const video=document.getElementById('plate'),image=document.getElementById('reference'),canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const paths=[new Path2D('M711 169 C735 169 760 184 770 210 C780 234 777 260 765 280 C759 291 751 301 751 314 L752 418 C752 439 740 450 718 450 C696 450 685 440 685 420 L683 338 C682 329 676 326 670 330 C657 340 639 344 621 342 C603 341 590 333 581 323 C571 309 565 294 564 280 C562 263 572 246 587 235 C598 225 611 219 622 220 C638 199 653 186 668 178 C681 171 697 167 711 169 Z'),new Path2D('M887 169 C864 169 844 183 832 208 C820 233 820 259 832 280 C838 292 844 302 844 317 L840 420 C840 440 851 451 872 451 C894 451 907 442 908 421 L914 337 C916 328 922 326 928 330 C942 340 960 344 979 342 C997 340 1010 330 1019 316 C1028 301 1031 287 1031 275 C1030 260 1021 245 1008 235 C997 225 985 219 974 220 C959 200 944 186 928 180 C915 171 902 167 887 169 Z')];
+const clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
+function bud(index,cx,cy,height,angle,alpha){ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);const k=height/304;ctx.scale(k,k);ctx.translate(index?-929:-669,-311);ctx.globalAlpha=alpha;ctx.clip(paths[index]);ctx.drawImage(image,0,0,1536,1024);const shade=ctx.createLinearGradient(600,160,850,450);shade.addColorStop(0,'rgba(3,8,18,0)');shade.addColorStop(1,'rgba(3,8,18,.4)');ctx.fillStyle=shade;ctx.fillRect(0,0,1536,1024);ctx.restore();}
+window.viscraft={ready:async()=>{await Promise.all([image.decode(),video.decode()])},render:async({frame,time,width,height})=>{
+ video.src='../assets/space-jpeg/'+String(frame).padStart(4,'0')+'.jpg';await video.decode();
+ if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height}ctx.clearRect(0,0,width,height);ctx.drawImage(video,0,0,width,height);ctx.save();ctx.scale(width/1920,height/1080);
+ const a=smooth((time-.72)/.3),span=160+71*time;
+ if(a>0){
+  // Clear the small generated products inside the intentionally quiet center.
+  // The wave field stays flat video; the new product layer is explicitly authored.
+  ctx.save();ctx.translate(960,530);ctx.scale((span+95)/2,(span*.73+130)/2);let m=ctx.createRadialGradient(0,0,0,0,0,1.2);m.addColorStop(0,`rgba(0,0,0,${a})`);m.addColorStop(.82,`rgba(0,0,0,${a})`);m.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=m;ctx.fillRect(-1.3,-1.3,2.6,2.6);ctx.restore();
+  const h=span*.52,drift=2*Math.sin(time*.55);
+  bud(0,960-span*.255,530-span*.09+drift,h,-.22,a);
+  bud(1,960+span*.255,530+span*.09-drift,h,.22,a);
+ }
+ ctx.restore();}};
+</script></body></html>

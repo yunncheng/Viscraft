@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>storybook-score — synthesized picture-book score</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #101014;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      // The Runtime sound contract: window.viscraftSound.render(args) is called
+      // once and must return exactly `channels` arrays of exactly `samples`
+      // samples. `samples` is the Source's native per-channel span, not a
+      // picture frame count. All arrangement and synthesis live in score.mjs /
+      // synth.mjs. This page is sound only: it needs no window.viscraftvideo and
+      // draws nothing. There is no fetch: every voice is generated in-process.
+      import { renderScore } from './score.mjs';
+
+      window.viscraftSound = {
+        ready() {
+          return Promise.resolve();
+        },
+        render({ sampleRate, channels, samples, params, seed }) {
+          const result = renderScore({ sampleRate, channels, frames: samples, params, seed });
+          window.viscraftSound.report = result.report;
+          return { channels: result.channels };
+        },
+        dispose() {
+          window.viscraftSound.report = null;
+        },
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "scope": "Real technical reproduction in an independent Project with the current Runtime; no model call, human listening or artistic score is implied.",
+  "poster": {
+    "width": 2400,
+    "height": 3000,
+    "decodedPixelsMatchAccepted": true,
+    "acceptedSha256": "94c55692d03f626dae1d61147d303bf673c744b9b9523dc133d0c98045a03612"
+  },
+  "film": {
+    "frames": 720,
+    "fps": 24,
+    "width": 1920,
+    "height": 1080,
+    "allDecodedFramesMatchAccepted": false,
+    "acceptedSha256": "d7c4179cd062aaf2c0476a27c34ec6435313a31a514c12bd93ac79aa3443d5b1",
+    "rebuiltSha256": "4f0a98e93d5cf8bf01addb236c8dad8a6c8807cebb29f65ac74434b172881699",
+    "meanSsimAgainstAccepted": 0.9993276777777779,
+    "minimumFrameSsimAgainstAccepted": 0.997207,
+    "differenceScope": "Only the two imported selected-footage passages differ after the current Asset path re-encodes them; all 384 code/composite frames are pixel-identical. Accepted media are preserved unchanged."
+  },
+  "retainedFilesVerified": 220,
+  "providerSubmissions": 0,
+  "listeningClaimed": false
+}

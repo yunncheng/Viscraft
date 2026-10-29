@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pictogram characters — icon-body hand-off entry</title>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #f3eee2; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="pictogram"></canvas>
+<script type="module">
+// Entry contract: window.viscraft.render(ctx) is called once per frame.
+// The actors, choreography and drawing live in ./pictogram-characters.mjs so the
+// mechanism is reusable; this page only forwards the capture context.
+import { renderPictogram } from './pictogram-characters.mjs';
+
+window.viscraft = {
+  render(ctx) {
+    renderPictogram(document.getElementById('pictogram'), ctx);
+  },
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+# Track only the public product at the repository root.
+# Internal development material stays local, including AGENTS.md and docs/.
+/*
+!/.gitattributes
+!/.gitignore
+!/.prettierrc.json
+!/.github/
+!/assets/
+!/scripts/
+!/skills/
+!/src/
+!/tests/
+!/README.md
+!/CONTRIBUTING.md
+!/LICENSE
+!/THIRD_PARTY_NOTICES.md
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+/assets/*
+!/assets/Logo.png
+
+# Generated files, local production and private host state.
+# Licensed Skill reference media remain source files.
+# Public source is exported by scripts/prepare-release.mjs; ignore rules alone
+# do not remove tracked files or private Git history.
+
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+*.log
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+.scratch/
+/outputs/
+/releases/
+/cases/
+/references/
+/docs/evidence/
+.codebuddy/
+.agents/
+.aws/
+.codex/
+.claude/
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.env
+.env.*
+!.env.example

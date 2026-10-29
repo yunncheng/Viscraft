@@ -1,0 +1,113 @@
+@font-face {
+  font-family: "Archive CJK";
+  src: url("fonts/NotoSansSC-400-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archive CJK";
+  src: url("fonts/NotoSansSC-700-subset.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archive Latin";
+  src: url("fonts/SpaceGrotesk-400-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archive Latin";
+  src: url("fonts/SpaceGrotesk-700-subset.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+
+html,
+body {
+  margin: 0;
+  width: 1080px;
+  height: 1080px;
+  overflow: hidden;
+  background: #1c1a17;
+}
+
+.card {
+  position: relative;
+  width: 1080px;
+  height: 1080px;
+  color: #f4efe6;
+  font-family: "Archive CJK", sans-serif;
+}
+
+.card-plate {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  height: 640px;
+  margin: 0;
+  overflow: hidden;
+}
+.card-plate img {
+  width: 1080px;
+  height: 640px;
+  object-fit: cover;
+  display: block;
+}
+.card-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(28, 26, 23, 0) 55%, rgba(28, 26, 23, 0.9) 100%);
+}
+
+.card-body {
+  position: absolute;
+  left: 72px;
+  top: 676px;
+  width: 936px;
+}
+.kicker {
+  margin: 0 0 24px;
+  font-size: 19px;
+  letter-spacing: 4px;
+  color: #a99e8f;
+}
+.card-title {
+  margin: 0;
+  font-family: "Archive CJK", sans-serif;
+  font-weight: 700;
+  font-size: 66px;
+  line-height: 1.32;
+  letter-spacing: 2px;
+}
+.card-rule {
+  width: 160px;
+  height: 3px;
+  background: #b4472a;
+  margin: 26px 0 22px;
+}
+.card-en {
+  margin: 0;
+  font-family: "Archive Latin", sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 9px;
+  color: #e8b79c;
+}
+.card-meta {
+  margin: 18px 0 0;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #9b9184;
+}
+.card-mark {
+  position: absolute;
+  right: 72px;
+  bottom: 56px;
+  font-family: "Archive Latin", sans-serif;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: #6f665b;
+}

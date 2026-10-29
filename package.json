@@ -1,0 +1,51 @@
+{
+  "name": "viscraft-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local creative production runtime for coding agents",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yunncheng/Viscraft.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "types": "./dist/src/index.d.ts",
+  "bin": {
+    "viscraft": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc && node scripts/copy-runtime-assets.mjs",
+    "prepack": "npm run build",
+    "test": "npm run build && node scripts/run-tests.mjs unit",
+    "test:e2e": "npm run build && node scripts/run-tests.mjs e2e",
+    "viscraft": "node dist/src/cli.js",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "tsc --noEmit && npm run format:check",
+    "release:prepare": "node scripts/prepare-release.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0",
+    "three": "0.186.1",
+    "typescript": "^5.7.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "3.9.10"
+  }
+}

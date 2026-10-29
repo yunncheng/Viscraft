@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Atlas reveal — cel + chart CodeScene entry</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#12100c}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="atlas"></canvas>
+<script type="module">
+// Entry contract: window.viscraft.render(ctx) is called once per frame.
+// The composition that combines the two vendored modules lives in
+// ./atlas-scene.mjs so this page only wires the canvas to the contract.
+import { renderAtlas } from './atlas-scene.mjs';
+window.viscraft = {
+  render(ctx) {
+    renderAtlas(document.getElementById('atlas'), ctx);
+  },
+};
+</script>
+</body></html>

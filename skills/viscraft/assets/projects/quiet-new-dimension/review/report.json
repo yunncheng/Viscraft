@@ -1,0 +1,961 @@
+{
+  "schema": "viscraft-review/1",
+  "build": "build-e13eae34-f3f9-435d-9f81-e35f54509dc3",
+  "revision": 11,
+  "snapshotHash": "902fd0685b05ce961ba974c632c3e0d0c4c662840e5be97a901b7885d3ee254a",
+  "snapshotHashVerified": true,
+  "status": "succeeded",
+  "startedAt": "2026-10-21T11:31:29.351Z",
+  "finishedAt": "2026-10-21T11:33:20.846Z",
+  "simulated": false,
+  "simulatedArtifacts": [],
+  "project": {
+    "id": "project-7ba1e029172d3b6f",
+    "title": "静，启新境。 | Earbuds Launch"
+  },
+  "output": {
+    "width": 1920,
+    "height": 1080,
+    "fps": {
+      "numerator": 24,
+      "denominator": 1
+    },
+    "sampleRate": 48000,
+    "channels": 2
+  },
+  "timeline": {
+    "expectedFrames": 720,
+    "shots": [
+      {
+        "shot": "silence",
+        "placementIds": [
+          "p-silence"
+        ]
+      },
+      {
+        "shot": "awakening",
+        "placementIds": [
+          "p-awakening"
+        ]
+      },
+      {
+        "shot": "suspension",
+        "placementIds": [
+          "p-suspension"
+        ]
+      },
+      {
+        "shot": "sound-space",
+        "placementIds": [
+          "p-sound-space"
+        ]
+      },
+      {
+        "shot": "signature",
+        "placementIds": [
+          "p-signature"
+        ]
+      }
+    ],
+    "placements": [
+      {
+        "id": "p-silence",
+        "shot": "silence",
+        "inFrame": 0,
+        "outFrame": 48,
+        "startFrame": 0,
+        "audio": "mute"
+      },
+      {
+        "id": "p-awakening",
+        "shot": "awakening",
+        "inFrame": 0,
+        "outFrame": 144,
+        "startFrame": 48,
+        "audio": "mute"
+      },
+      {
+        "id": "p-suspension",
+        "shot": "suspension",
+        "inFrame": 0,
+        "outFrame": 192,
+        "startFrame": 192,
+        "audio": "mute"
+      },
+      {
+        "id": "p-sound-space",
+        "shot": "sound-space",
+        "inFrame": 0,
+        "outFrame": 192,
+        "startFrame": 384,
+        "audio": "mute"
+      },
+      {
+        "id": "p-signature",
+        "shot": "signature",
+        "inFrame": 0,
+        "outFrame": 144,
+        "startFrame": 576,
+        "audio": "mute"
+      }
+    ],
+    "subtitles": [],
+    "layers": [],
+    "cuts": [
+      {
+        "index": 0,
+        "from": "p-silence",
+        "to": "p-awakening",
+        "cutFrame": 48,
+        "overlapFrames": 0,
+        "sampledFrames": [
+          46,
+          47,
+          48,
+          49
+        ],
+        "columns": 4,
+        "strip": ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-00.png"
+      },
+      {
+        "index": 1,
+        "from": "p-awakening",
+        "to": "p-suspension",
+        "cutFrame": 192,
+        "overlapFrames": 0,
+        "sampledFrames": [
+          190,
+          191,
+          192,
+          193
+        ],
+        "columns": 4,
+        "strip": ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-01.png"
+      },
+      {
+        "index": 2,
+        "from": "p-suspension",
+        "to": "p-sound-space",
+        "cutFrame": 384,
+        "overlapFrames": 0,
+        "sampledFrames": [
+          382,
+          383,
+          384,
+          385
+        ],
+        "columns": 4,
+        "strip": ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-02.png"
+      },
+      {
+        "index": 3,
+        "from": "p-sound-space",
+        "to": "p-signature",
+        "cutFrame": 576,
+        "overlapFrames": 0,
+        "sampledFrames": [
+          574,
+          575,
+          576,
+          577
+        ],
+        "columns": 4,
+        "strip": ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-03.png"
+      }
+    ],
+    "contactSheetCells": [
+      {
+        "placement": "p-silence",
+        "shot": "silence",
+        "position": "first",
+        "frame": 0
+      },
+      {
+        "placement": "p-silence",
+        "shot": "silence",
+        "position": "middle",
+        "frame": 23
+      },
+      {
+        "placement": "p-silence",
+        "shot": "silence",
+        "position": "last",
+        "frame": 47
+      },
+      {
+        "placement": "p-awakening",
+        "shot": "awakening",
+        "position": "first",
+        "frame": 48
+      },
+      {
+        "placement": "p-awakening",
+        "shot": "awakening",
+        "position": "middle",
+        "frame": 119
+      },
+      {
+        "placement": "p-awakening",
+        "shot": "awakening",
+        "position": "last",
+        "frame": 191
+      },
+      {
+        "placement": "p-suspension",
+        "shot": "suspension",
+        "position": "first",
+        "frame": 192
+      },
+      {
+        "placement": "p-suspension",
+        "shot": "suspension",
+        "position": "middle",
+        "frame": 287
+      },
+      {
+        "placement": "p-suspension",
+        "shot": "suspension",
+        "position": "last",
+        "frame": 383
+      },
+      {
+        "placement": "p-sound-space",
+        "shot": "sound-space",
+        "position": "first",
+        "frame": 384
+      },
+      {
+        "placement": "p-sound-space",
+        "shot": "sound-space",
+        "position": "middle",
+        "frame": 479
+      },
+      {
+        "placement": "p-sound-space",
+        "shot": "sound-space",
+        "position": "last",
+        "frame": 575
+      },
+      {
+        "placement": "p-signature",
+        "shot": "signature",
+        "position": "first",
+        "frame": 576
+      },
+      {
+        "placement": "p-signature",
+        "shot": "signature",
+        "position": "middle",
+        "frame": 647
+      },
+      {
+        "placement": "p-signature",
+        "shot": "signature",
+        "position": "last",
+        "frame": 719
+      }
+    ]
+  },
+  "final": {
+    "artifact": "artifact-649b458d7aedc7a4238c69ce101cc1bcdac14850",
+    "path": ".viscraft/artifacts/artifact-649b458d7aedc7a4238c69ce101cc1bcdac14850.mp4",
+    "sha256": "d7c4179cd062aaf2c0476a27c34ec6435313a31a514c12bd93ac79aa3443d5b1",
+    "probe": {
+      "frames": 720,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "width": 1920,
+      "height": 1080,
+      "duration": 30,
+      "videoCodec": "h264",
+      "audio": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 30
+      }
+    },
+    "conformance": {
+      "framesMatch": true,
+      "fpsMatch": true,
+      "widthMatch": true,
+      "heightMatch": true,
+      "audioMatch": true
+    }
+  },
+  "artifacts": [
+    {
+      "id": "artifact-21aa7471c908a85f1c49f7aebb22bfe1425e0362",
+      "path": ".viscraft/artifacts/artifact-21aa7471c908a85f1c49f7aebb22bfe1425e0362.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "9c6e6d0f20904842697a5de3275b90179fff9918985cd68b26b45072f5423bb0",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-c822a6354c823d499ff073aa6f159dfde6bdc261",
+      "path": ".viscraft/artifacts/artifact-c822a6354c823d499ff073aa6f159dfde6bdc261.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "da2808aa0e8491ccaf853984ad94a16bb0306241a4e24ecfcb58113d79fa7c41",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-f624d41169f056e2f89782a24affb8179acdaf94",
+      "path": ".viscraft/artifacts/artifact-f624d41169f056e2f89782a24affb8179acdaf94.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "4240d56f5d11b9a9c923e32626c9ba9f3cffb93bcc4b8550cc8dca148809165c",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-a8c9039b1fa93cdb77fedb33fdeffa211e3bbe49",
+      "path": ".viscraft/artifacts/artifact-a8c9039b1fa93cdb77fedb33fdeffa211e3bbe49.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "c61875afdd578bb8c755c84f301b39fef8194d5ad4f2f24b2f0048c7fb929576",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-e65169fefe87d5129af97dc689a93d6083e422f6",
+      "path": ".viscraft/artifacts/artifact-e65169fefe87d5129af97dc689a93d6083e422f6.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "f5294d0f34453e77f62d040792af8122fb6e0ba51a3e70bd1fa202304bfc52ff",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-7910efcd08636984eb9c41437345ebc366c11380",
+      "path": ".viscraft/artifacts/artifact-7910efcd08636984eb9c41437345ebc366c11380.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "c29fb48ed5641a234d39666b5edd1a67f6b2456179fb461bada5e0b8f37ba423",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-0db5f77bdabe01ea58128eef282b1f64acf59561",
+      "path": ".viscraft/artifacts/artifact-0db5f77bdabe01ea58128eef282b1f64acf59561.wav",
+      "kind": "audio",
+      "simulated": false,
+      "sha256": "ab9e16bd4db561c23864ce13651452ebc43912c0782d50428e92d80ed4179fca",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-07a813929c8d55ea3d8522f00aea783efa954bc8",
+      "path": ".viscraft/artifacts/artifact-07a813929c8d55ea3d8522f00aea783efa954bc8.wav",
+      "kind": "audio",
+      "simulated": false,
+      "sha256": "ab9e16bd4db561c23864ce13651452ebc43912c0782d50428e92d80ed4179fca",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-f20e270d71ef04e78a92d3881968cb0ecc2e613a",
+      "path": ".viscraft/artifacts/artifact-f20e270d71ef04e78a92d3881968cb0ecc2e613a.wav",
+      "kind": "audio",
+      "simulated": false,
+      "sha256": "ab9e16bd4db561c23864ce13651452ebc43912c0782d50428e92d80ed4179fca",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-4dde4d6caf0fbbdd548459e874d94c5fafc9cdbc",
+      "path": ".viscraft/artifacts/artifact-4dde4d6caf0fbbdd548459e874d94c5fafc9cdbc.wav",
+      "kind": "audio",
+      "simulated": false,
+      "sha256": "56af7da61a2746e2cf3f421bd11b4c412819b92da559e08fb82604f9d12cd6c4",
+      "exists": true,
+      "hashMatches": true
+    },
+    {
+      "id": "artifact-649b458d7aedc7a4238c69ce101cc1bcdac14850",
+      "path": ".viscraft/artifacts/artifact-649b458d7aedc7a4238c69ce101cc1bcdac14850.mp4",
+      "kind": "video",
+      "simulated": false,
+      "sha256": "d7c4179cd062aaf2c0476a27c34ec6435313a31a514c12bd93ac79aa3443d5b1",
+      "exists": true,
+      "hashMatches": true
+    }
+  ],
+  "diagnostics": [],
+  "takes": [
+    {
+      "id": "take-2cba7c094f6d98ebb70e10a48bf12021aa316340",
+      "source": "silence",
+      "artifact": "artifact-21aa7471c908a85f1c49f7aebb22bfe1425e0362",
+      "frames": 48,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false,
+      "recorded": true,
+      "hasAudio": false
+    },
+    {
+      "id": "take-f2373e4b4a9f1674eb676c15000bcf72aa366c70",
+      "source": "awakening",
+      "artifact": "artifact-c822a6354c823d499ff073aa6f159dfde6bdc261",
+      "frames": 209,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false,
+      "recorded": true,
+      "hasAudio": true
+    },
+    {
+      "id": "take-c47b3639fd8d6b6a5bc76b821df7abf2a69d88af",
+      "source": "suspension",
+      "artifact": "artifact-f624d41169f056e2f89782a24affb8179acdaf94",
+      "frames": 209,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false,
+      "recorded": true,
+      "hasAudio": true
+    },
+    {
+      "id": "take-7153f550b0b908511bbf0ce31557761911042548",
+      "source": "sound-space-finish",
+      "artifact": "artifact-a8c9039b1fa93cdb77fedb33fdeffa211e3bbe49",
+      "frames": 192,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false,
+      "recorded": true,
+      "hasAudio": false
+    },
+    {
+      "id": "take-39baa67dfe4a2c9f19af9d5f8dbc6adcb653a9f2",
+      "source": "signature",
+      "artifact": "artifact-e65169fefe87d5129af97dc689a93d6083e422f6",
+      "frames": 144,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false,
+      "recorded": true,
+      "hasAudio": false
+    },
+    {
+      "id": "take-6cd177cdc85800c59388e1d0ffcef0bd21c44765",
+      "source": "score",
+      "artifact": "artifact-0db5f77bdabe01ea58128eef282b1f64acf59561",
+      "frames": 720,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "simulated": false,
+      "recorded": false,
+      "hasAudio": true,
+      "audioOnly": true,
+      "audio": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 30,
+        "samples": 1440000
+      },
+      "pictureFacts": "omitted: this Take is audio-only (no video stream), so it contributes no picture, contact-sheet cell, cut seam, black-frame or repeated-frame fact"
+    }
+  ],
+  "keptAudio": [],
+  "audio": {
+    "expected": {
+      "sampleRate": 48000,
+      "channels": 2
+    },
+    "actual": {
+      "sampleRate": 48000,
+      "channels": 2,
+      "duration": 30
+    },
+    "clips": [
+      {
+        "id": "original-score",
+        "kind": "source",
+        "bus": "score",
+        "asset": null,
+        "assetSamples": null,
+        "usedSamples": 1440000,
+        "startSample": 0,
+        "endSample": 1440000,
+        "programmeSamples": 1440000,
+        "truncatedByProgrammeEnd": false
+      }
+    ],
+    "loudness": {
+      "available": true,
+      "integratedLufs": -18.4,
+      "truePeakDbfs": -1.9
+    },
+    "silence": {
+      "available": true,
+      "intervals": [
+        {
+          "start": 0,
+          "end": 2.00144,
+          "duration": 2.00144
+        },
+        {
+          "start": 6.89881,
+          "end": 7.502,
+          "duration": 0.603187
+        },
+        {
+          "start": 8.20792,
+          "end": 9.20275,
+          "duration": 0.994833
+        },
+        {
+          "start": 9.87838,
+          "end": 10.0011,
+          "duration": 0.122771
+        },
+        {
+          "start": 17.736,
+          "end": 18.0016,
+          "duration": 0.265583
+        },
+        {
+          "start": 22.2662,
+          "end": 22.4053,
+          "duration": 0.139083
+        },
+        {
+          "start": 23.0364,
+          "end": 23.2049,
+          "duration": 0.1685
+        },
+        {
+          "start": 23.8415,
+          "end": 24.0017,
+          "duration": 0.160167
+        },
+        {
+          "start": 24.8902,
+          "end": 26.453,
+          "duration": 1.56281
+        },
+        {
+          "start": 28.1979,
+          "end": 30.016,
+          "duration": 1.81815
+        }
+      ]
+    }
+  },
+  "video": {
+    "blackFrames": [
+      {
+        "start": 0,
+        "end": 2.875,
+        "duration": 2.875
+      },
+      {
+        "start": 6.04167,
+        "end": 6.25,
+        "duration": 0.208333
+      },
+      {
+        "start": 17.0417,
+        "end": 17.2917,
+        "duration": 0.25
+      },
+      {
+        "start": 24,
+        "end": 24.125,
+        "duration": 0.125
+      }
+    ],
+    "repeatedFrameSpans": {
+      "method": "decode at 64x64 rgb24 (lanczos) and compare consecutive frames; unchanged when max per-channel delta <= 16 AND mean per-channel delta <= 0.75",
+      "sampleWidth": 64,
+      "sampleHeight": 64,
+      "toleranceMaxAbsDiff": 16,
+      "toleranceMeanAbsDiff": 0.75,
+      "analysedFrames": 720,
+      "spanCount": 56,
+      "repeatedFrames": 488,
+      "spans": [
+        {
+          "startFrame": 0,
+          "endFrame": 65,
+          "lengthFrames": 66
+        },
+        {
+          "startFrame": 67,
+          "endFrame": 69,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 71,
+          "endFrame": 73,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 75,
+          "endFrame": 77,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 79,
+          "endFrame": 81,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 84,
+          "endFrame": 85,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 87,
+          "endFrame": 89,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 90,
+          "endFrame": 93,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 94,
+          "endFrame": 97,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 98,
+          "endFrame": 101,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 102,
+          "endFrame": 105,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 106,
+          "endFrame": 109,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 110,
+          "endFrame": 113,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 114,
+          "endFrame": 117,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 118,
+          "endFrame": 120,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 122,
+          "endFrame": 124,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 126,
+          "endFrame": 129,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 130,
+          "endFrame": 133,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 134,
+          "endFrame": 137,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 138,
+          "endFrame": 141,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 142,
+          "endFrame": 144,
+          "lengthFrames": 3
+        },
+        {
+          "startFrame": 146,
+          "endFrame": 149,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 150,
+          "endFrame": 153,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 154,
+          "endFrame": 157,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 158,
+          "endFrame": 161,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 162,
+          "endFrame": 165,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 166,
+          "endFrame": 167,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 168,
+          "endFrame": 169,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 170,
+          "endFrame": 173,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 174,
+          "endFrame": 177,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 178,
+          "endFrame": 181,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 182,
+          "endFrame": 185,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 186,
+          "endFrame": 189,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 190,
+          "endFrame": 191,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 192,
+          "endFrame": 285,
+          "lengthFrames": 94
+        },
+        {
+          "startFrame": 286,
+          "endFrame": 287,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 288,
+          "endFrame": 289,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 290,
+          "endFrame": 294,
+          "lengthFrames": 5
+        },
+        {
+          "startFrame": 295,
+          "endFrame": 298,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 300,
+          "endFrame": 311,
+          "lengthFrames": 12
+        },
+        {
+          "startFrame": 312,
+          "endFrame": 383,
+          "lengthFrames": 72
+        },
+        {
+          "startFrame": 410,
+          "endFrame": 411,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 538,
+          "endFrame": 539,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 541,
+          "endFrame": 545,
+          "lengthFrames": 5
+        },
+        {
+          "startFrame": 546,
+          "endFrame": 547,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 548,
+          "endFrame": 549,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 551,
+          "endFrame": 555,
+          "lengthFrames": 5
+        },
+        {
+          "startFrame": 556,
+          "endFrame": 559,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 561,
+          "endFrame": 562,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 563,
+          "endFrame": 567,
+          "lengthFrames": 5
+        },
+        {
+          "startFrame": 568,
+          "endFrame": 569,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 571,
+          "endFrame": 574,
+          "lengthFrames": 4
+        },
+        {
+          "startFrame": 576,
+          "endFrame": 577,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 578,
+          "endFrame": 579,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 582,
+          "endFrame": 583,
+          "lengthFrames": 2
+        },
+        {
+          "startFrame": 590,
+          "endFrame": 719,
+          "lengthFrames": 130
+        }
+      ]
+    }
+  },
+  "beats": {
+    "declared": [],
+    "toleranceFrames": 1,
+    "toleranceSamples": 2000,
+    "boundaries": [
+      {
+        "kind": "placement-start",
+        "frame": 0,
+        "sample": 0,
+        "placement": "p-silence",
+        "nearestBeat": null,
+        "distanceSamples": null,
+        "distanceFrames": null,
+        "onBeat": false
+      },
+      {
+        "kind": "placement-start",
+        "frame": 48,
+        "sample": 96000,
+        "placement": "p-awakening",
+        "nearestBeat": null,
+        "distanceSamples": null,
+        "distanceFrames": null,
+        "onBeat": false
+      },
+      {
+        "kind": "placement-start",
+        "frame": 192,
+        "sample": 384000,
+        "placement": "p-suspension",
+        "nearestBeat": null,
+        "distanceSamples": null,
+        "distanceFrames": null,
+        "onBeat": false
+      },
+      {
+        "kind": "placement-start",
+        "frame": 384,
+        "sample": 768000,
+        "placement": "p-sound-space",
+        "nearestBeat": null,
+        "distanceSamples": null,
+        "distanceFrames": null,
+        "onBeat": false
+      },
+      {
+        "kind": "placement-start",
+        "frame": 576,
+        "sample": 1152000,
+        "placement": "p-signature",
+        "nearestBeat": null,
+        "distanceSamples": null,
+        "distanceFrames": null,
+        "onBeat": false
+      }
+    ],
+    "summary": {
+      "boundaries": 5,
+      "onBeat": 0,
+      "offBeat": 5,
+      "note": "No beat grid is declared; every boundary is reported with a null nearest beat."
+    }
+  },
+  "matchCuts": [],
+  "contactSheet": ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/contact-sheet.png",
+  "seams": [
+    ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-00.png",
+    ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-01.png",
+    ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-02.png",
+    ".viscraft/reviews/build-e13eae34-f3f9-435d-9f81-e35f54509dc3/seam-03.png"
+  ],
+  "candidateComparisons": [],
+  "observation": "extracted stills + technical audio analysis; subjective audio review not performed",
+  "limitations": [
+    "Contact sheet and seam strips are extracted stills for visual inspection; sampling three frames per placement and four frames per cut does not measure continuity, motion, acting or aesthetic quality.",
+    "Audio was measured numerically (EBU R128 integrated loudness / true peak and silence intervals); no subjective listening review was performed.",
+    "Loudness, silence and black-frame results are technical facts, not an aesthetic pass/fail verdict. Intended pauses or black frames are not automatically defects.",
+    "Repeated-frame spans are a technical fact, not a defect: designed holds, stills and held frames are legitimate creative choices. Detection uses a fixed-size sampled picture and a bounded tolerance, so a nearly-static slow ramp may or may not register and must not be read as a quality verdict.",
+    "Beat/onset alignment reports the distance from each declared boundary to the nearest declared beat. A boundary that does not land on a beat is a fact, not a failure: cutting off the beat grid can be deliberate.",
+    "Per-clip audio durations and truncation are measured facts (see `audio.clips`): a clip whose used samples reach past the programme end is cut there, which may be intended or may silently clip a longer song's tail.",
+    "1 Take(s) are audio-only (no video stream; see the `takes` entries marked `audioOnly`) and are reported with their real audio facts only; no picture fact (contact-sheet cell, cut seam, black-frame or repeated-frame span) is fabricated for them."
+  ]
+}

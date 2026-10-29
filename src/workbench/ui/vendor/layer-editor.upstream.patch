@@ -1,0 +1,1188 @@
+--- a/layer-editor.js
++++ b/layer-editor.js
+@@ -1,42 +1,39 @@
+ /* ============================================================
+-   layer-editor —— 海报图层微调编辑器
+-   与 layer-editor.css 配套。接入方式：在海报 HTML 的 </head> 前加两行
+-     <link rel="stylesheet" href="layer-editor.css">
+-     <script src="layer-editor.js" defer></script>
+-   海报本体无需任何改动，移除这两行即还原为纯海报。
+-
+-   定位：微调工具，不是设计工具。只做「改位置 / 改尺寸 / 改文字 / 改字号字体 / 删图层」。
+-   前置契约：画布为固定 px 尺寸并声明 data-canvas-width/height；
+-             可编辑单元带 data-layer-id。详见 SKILL.md。
++   layer-editor — layer micro-adjustment editor
++   Vendored from yejy53/Editable-Design commit
++   c87b16f6d7c198e2b6967f13f1b1baa939d6f31f (Apache-2.0).
++   Viscraft adaptation: the toolbar no longer downloads an edited
++   HTML file, Ctrl/Cmd+S asks the host workbench to save, edits are
++   reported to the host instead of being stored as a browser draft,
++   user-visible chrome is English, and font discovery/undo follow
++   the host's authoring contract. The source checkout's ui/README.md
++   and adjacent upstream patch record the exact modifications.
++
++   Pairs with layer-editor.css. The host injects both after the
++   author document has loaded, so the saved source never contains
++   these tags. Removing them restores the plain document.
++
++   Scope: micro-adjustment, not design. Move / size / text /
++   font size / font / delete only. Precondition: the canvas is a
++   fixed px box declaring data-canvas-width/height, and editable
++   units carry data-layer-id.
+    ============================================================ */
+ (() => {
+   'use strict';
+
+   const canvas = document.querySelector('[data-canvas-width]') || document.querySelector('.poster-canvas');
+   if (!canvas) {
+-    console.error('[layer-editor] 找不到画布：需要一个带 data-canvas-width 的根节点');
++    console.error('[layer-editor] no canvas: expected a root node with data-canvas-width');
+     return;
+   }
+   canvas.classList.add('hf-canvas');
+
+   const CW = +canvas.dataset.canvasWidth || canvas.offsetWidth;
+   const CH = +canvas.dataset.canvasHeight || canvas.offsetHeight;
+-  const SNAP = 8;          // 吸附阈值，画布坐标系下的像素
+-  const FS_STEP = 1.08;    // 字号每次缩放比例
+-  const MIN_W = 24;        // 手动缩放的最小图层宽度
+-  const MIN_H = 16;        // 手动缩放的最小图层高度
+-  const sourceSignature = (() => {
+-    let hash = 2166136261;
+-    const source = canvas.outerHTML;
+-    for (let i = 0; i < source.length; i++) {
+-      hash ^= source.charCodeAt(i);
+-      hash = Math.imul(hash, 16777619);
+-    }
+-    return (hash >>> 0).toString(36);
+-  })();
+-  const sourceRevision = document.documentElement.dataset.hfSourceRevision || sourceSignature;
+-  const runtimeRevision = document.documentElement.dataset.hfRuntimeRevision || 'runtime-v1';
+-  const DRAFT_KEY = `hf-draft:${location.pathname}:${sourceRevision}:${runtimeRevision}`;
++  const SNAP = 8;          // snap threshold, in canvas pixels
++  const FS_STEP = 1.08;    // font-size step per click
++  const MIN_W = 24;        // smallest layer width set by a handle
++  const MIN_H = 16;        // smallest layer height set by a handle
+   const MOTION = {
+     scan: 760, scanOverlap: 0.78,
+     duration: 780, reverse: 620, stagger: 58,
+@@ -47,7 +44,11 @@
+
+   const state = {
+     scale: 1, sel: null, layers: [], undo: [],
+-    initial: new Map(), removed: [], ui: {},
++    initial: new Map(), resetLayout: new Map(), removed: [], ui: {},
++    // What the loaded document already carried before this session started.
++    // Edits are always reported against the AUTHOR source, so a reopened save
++    // must not look like "nothing changed" and lose its recorded edits.
++    baseMoves: new Map(), textBase: new Map(), fontBase: new Map(),
+     exploded: false, spread: null, spreadGeometry: new Map(),
+     groups: new Map(),
+     sourceCanvas: null,
+@@ -241,6 +242,14 @@
+         (anchors.get(top) || top).insertAdjacentElement('afterend', el);
+         anchors.set(top, el);
+       }
++      // A saved edit moves its layer with a CSS offset so the record also
++      // works on a document that was never baked. That measurement already
++      // includes the offset, so the absolute left/top written below is the
++      // full position — drop the offset or the layer moves twice.
++      if (el.dataset.viscraftOffset === '1') {
++        el.style.translate = '';
++        delete el.dataset.viscraftOffset;
++      }
+       Object.assign(el.style, {
+         position: 'absolute',
+         left: px(box.left), top: px(box.top), width: px(layoutWidth), height: px(layoutHeight),
+@@ -323,8 +332,55 @@
+    * ------------------------------------------------------------- */
+   function markSlots() {
+     for (const { el } of state.layers) {
+-      for (const slot of findSlots(el)) slot.classList.add('hf-slot');
+-    }
++      for (const slot of findSlots(el)) {
++        slot.classList.add('hf-slot');
++        if (!state.textBase.has(slot)) state.textBase.set(slot, slot.innerHTML);
++        if (!state.fontBase.has(slot)) state.fontBase.set(slot, {
++          size: slot.style.fontSize || '', family: slot.style.fontFamily || '',
++        });
++      }
++    }
++    seedInitEdits();
++  }
++
++  const layerOf = (id) => canvas.querySelector(`[data-layer-id="${String(id).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`);
++
++  function atPath(root, path) {
++    let node = root;
++    for (const index of path) {
++      if (!node || !Number.isInteger(index) || index < 0) return null;
++      node = node.children[index] || null;
++    }
++    return node;
++  }
++
++  // The host applies a saved edit record before the editor starts, so the live
++  // DOM already shows those edits. The baseline used to decide "did the user
++  // change this?" must therefore come from the record itself: otherwise an
++  // untouched reopen would report no edit and the next save would silently
++  // drop the user's earlier work.
++  function seedInitEdits() {
++    const record = window.__viscraftInitEdits;
++    if (!record || record.version !== 1) return;
++    for (const move of record.layers || []) {
++      if (!move || typeof move.id !== 'string') continue;
++      state.baseMoves.set(move.id, move);
++    }
++    for (const edit of record.texts || []) {
++      if (!edit || !Array.isArray(edit.path) || typeof edit.from !== 'string') continue;
++      const slot = atPath(layerOf(edit.layer), edit.path);
++      if (slot) state.textBase.set(slot, edit.from);
++    }
++    for (const edit of record.fonts || []) {
++      if (!edit || !Array.isArray(edit.path) || !edit.from) continue;
++      const slot = atPath(layerOf(edit.layer), edit.path);
++      if (!slot) continue;
++      state.fontBase.set(slot, {
++        size: typeof edit.from.size === 'string' ? edit.from.size : '',
++        family: typeof edit.from.family === 'string' ? edit.from.family : '',
++      });
++    }
++    if (Array.isArray(record.removed)) state.removed = record.removed.filter((id) => typeof id === 'string');
+   }
+
+   function findSlots(root) {
+@@ -353,19 +409,18 @@
+    * 3. 编辑器 UI（全部动态创建，海报 HTML 里不留痕迹）
+    * ------------------------------------------------------------- */
+   function buildUI() {
+-    const title = (document.title || '海报').slice(0, 40);
++    const title = (document.title || 'Untitled design').slice(0, 40);
+     const bar = h(`
+       <div class="hf-bar">
+         <span class="hf-title">${title}</span>
+         <span class="hf-sep"></span>
+-        <button class="hf-btn" id="hf-undo" disabled>撤销</button>
+-        <button class="hf-btn" id="hf-reset">还原初始布局</button>
+-        <button class="hf-btn" id="hf-explode">拆解视图</button>
+-        <span class="hf-sep"></span>
+-        <button class="hf-btn primary" id="hf-save">下载 HTML</button>
+-        <button class="hf-btn" id="hf-explode-save">下载拆解稿</button>
+-        <button class="hf-btn" id="hf-css">复制定位 CSS</button>
+-        <label class="hf-zoom">缩放
++        <button class="hf-btn" id="hf-undo" title="Undo the last edit (Ctrl/⌘ Z), such as moving a layer, changing text or deleting a layer" disabled>Undo last edit</button>
++        <div class="hf-reset-actions" role="group" aria-label="Reset design">
++          <button class="hf-btn" id="hf-reset" title="Restore positions and sizes from when this design was opened; keep text, fonts and deleted layers">Reset layout</button>
++          <button class="hf-btn" id="hf-reset-all" disabled title="Restore the design as it was when opened; undo this session's edits, including saved or exported edits">Reset all edits</button>
++        </div>
++        <button class="hf-btn" id="hf-explode" hidden>Explode view</button>
++        <label class="hf-zoom">Zoom
+           <input type="range" id="hf-scale" min="10" max="100" step="1">
+           <output id="hf-scale-out">—</output>
+         </label>
+@@ -373,16 +428,12 @@
+
+     const panel = h(`
+       <div class="hf-panel">
+-        <div class="hf-draft" id="hf-draft" hidden>
+-          <span id="hf-draft-msg"></span>
+-          <button class="hf-btn" id="hf-draft-drop">丢弃草稿</button>
+-        </div>
+-        <h4>图层</h4>
++        <h4>Layers</h4>
+         <div class="hf-layers" id="hf-layers"></div>
+         <div class="hf-props" id="hf-props" hidden>
+-          <h4 style="padding-left:0">属性</h4>
++          <h4 style="padding-left:0">Properties</h4>
+           <div class="hf-field">
+-            <label>字号</label>
++            <label>Size</label>
+             <div class="hf-step">
+               <button class="hf-btn" id="hf-fs-down">A−</button>
+               <span class="val" id="hf-fs-val">—</span>
+@@ -390,42 +441,31 @@
+             </div>
+           </div>
+           <div class="hf-field">
+-            <label>尺寸</label>
++            <label>Box</label>
+             <span class="hf-size-val" id="hf-size-val">—</span>
+           </div>
+           <div class="hf-field" id="hf-ff-field">
+-            <label>字体</label>
++            <label>Font</label>
+             <select id="hf-ff"></select>
+           </div>
+-          <button class="hf-btn danger" id="hf-del">删除此图层</button>
++          <button class="hf-btn danger" id="hf-del">Delete layer</button>
+         </div>
+         <div class="hf-hint">
+-          <b>单击</b>选中并拖动　<b>绿色手柄</b>改宽高<br>
+-          <b>双击</b>改文字　<b>角点</b>同时改宽高<br>
+-          <kbd>方向键</kbd> 微调 1px　<kbd>Shift</kbd>+<kbd>方向键</kbd> 10px<br>
+-          <kbd>Alt</kbd> 临时关闭吸附　<kbd>Delete</kbd> 删除图层<br>
+-          <kbd>Enter</kbd> 提交文字　<kbd>Esc</kbd> 放弃本次修改<br>
+-          <kbd>⌘Z</kbd> 撤销　<kbd>⌘S</kbd> 下载
++          <details class="hf-shortcuts"><summary>Keyboard &amp; canvas shortcuts</summary>
++          <b>Click</b> to select and drag　<b>corner handles</b> resize<br>
++          <b>Double-click</b> to edit text　<b>corner</b> handles resize both<br>
++          <kbd>Arrows</kbd> nudge 1px　<kbd>Shift</kbd>+<kbd>Arrows</kbd> 10px<br>
++          <kbd>Alt</kbd> disables snapping　<kbd>Delete</kbd> removes the layer<br>
++          <kbd>Enter</kbd> commits text　<kbd>Esc</kbd> abandons that edit<br>
++          <kbd>Ctrl/⌘ Z</kbd> undo　<kbd>Ctrl/⌘ S</kbd> save
++          </details>
+         </div>
+       </div>`);
+
+-    const modal = h(`
+-      <div class="hf-modal" id="hf-modal" hidden>
+-        <div class="box">
+-          <header>
+-            <span id="hf-modal-title">导出</span>
+-            <button class="hf-btn hf-spacer" id="hf-modal-copy">复制</button>
+-            <button class="hf-btn" id="hf-modal-close">关闭</button>
+-          </header>
+-          <textarea id="hf-modal-text" spellcheck="false" readonly></textarea>
+-        </div>
+-      </div>`);
+-
+     const toast = h('<div class="hf-toast" id="hf-toast" hidden></div>');
+-    document.body.append(bar, panel, modal, toast);
+-    for (const id of ['undo', 'reset', 'explode', 'save', 'explode-save', 'css', 'scale', 'scale-out', 'layers', 'props',
+-      'fs-down', 'fs-up', 'fs-val', 'size-val', 'ff', 'ff-field', 'del', 'modal', 'modal-title',
+-      'modal-text', 'modal-copy', 'modal-close', 'toast', 'draft', 'draft-msg', 'draft-drop']) {
++    document.body.append(bar, panel, toast);
++    for (const id of ['undo', 'reset', 'reset-all', 'explode', 'scale', 'scale-out', 'layers', 'props',
++      'fs-down', 'fs-up', 'fs-val', 'size-val', 'ff', 'ff-field', 'del', 'toast']) {
+       state.ui[id] = document.getElementById('hf-' + id);
+     }
+   }
+@@ -693,7 +733,12 @@
+       tile.appendChild(label);
+     }
+     if (interactive && rec.kind !== 'group') tile.addEventListener('click', async () => {
++      // A tile is a read-only clone. Selecting a layer while the board is
++      // still up (or while the exit animation is running) would target the
++      // hidden canvas, so only a completed return to editing may select.
++      if (state.transitioning) return;
+       await setExploded(false);
++      if (state.exploded) return;
+       const live = state.layers.find((l) => l.id === rec.id);
+       if (live) select(live.el);
+     });
+@@ -758,11 +803,11 @@
+       .map((rec) => ({ ...rec, motionOrder: Math.min(12, rec.index + 1) }));
+     const full = { left: 0, top: 0, width: CW, height: CH };
+     const overview = {
+-      kind: 'overview', id: '__overview__', label: '完整成稿总览', index: -2,
++      kind: 'overview', id: '__overview__', label: 'Complete composition', index: -2,
+       motionOrder: 0, g: full, crop: full, area: CW * CH,
+     };
+     const background = {
+-      kind: 'background', id: '__background__', label: '背景基底', index: Number.MAX_SAFE_INTEGER,
++      kind: 'background', id: '__background__', label: 'Background', index: Number.MAX_SAFE_INTEGER,
+       motionOrder: 13, g: full, crop: full, area: CW * CH,
+     };
+     const records = [overview, ...contentRecords, background];
+@@ -953,24 +998,29 @@
+   function syncExplodedUI(on) {
+     document.body.classList.toggle('hf-exploded-on', on);
+     $('explode').classList.toggle('active', on);
+-    $('explode').textContent = on ? '返回编辑' : '拆解视图';
++    $('explode').textContent = on ? 'Back to editing' : 'Explode view';
+     $('undo').disabled = on || !state.undo.length;
+     $('reset').disabled = on;
+-    $('css').disabled = on;
+-  }
++  }
++
++  // The outer workbench owns the single visible entry for this view. It reads
++  // `state` here instead of keeping its own copy; this only tells it to re-read.
++  const notifyView = () => window.__viscraftWorkbench?.viewChanged?.();
+
+   async function setExploded(on = !state.exploded) {
+     if (state.transitioning || on === state.exploded) return;
+     state.transitioning = true;
+     $('explode').disabled = true;
+-    endEdit(true);
+     try {
++      notifyView();
++      endEdit(true);
+       if (on) {
+         state.spreadGeometry = new Map(state.layers.map(({ el, id }) => [id, geom(el)]));
+         if (state.spread?.board) state.spread.board.remove();
+         state.spread = makeExplodedBoard(true);
+         state.exploded = true;
+         syncExplodedUI(true);
++        notifyView();
+         select(null);
+         stage.appendChild(state.spread.board);
+         stage.parentElement.style.setProperty('--hf-exploded-bg', state.spread.theme.bg);
+@@ -982,12 +1032,14 @@
+         state.spread = null;
+         state.exploded = false;
+         syncExplodedUI(false);
++        notifyView();
+         stage.parentElement.style.removeProperty('--hf-exploded-bg');
+         setScale(fitScale());
+       }
+     } finally {
+       state.transitioning = false;
+       $('explode').disabled = false;
++      notifyView();
+     }
+   }
+
+@@ -1269,15 +1321,45 @@
+     $('undo').disabled = false;
+   }
+
++  function boxState(layer) {
++    return {
++      left: layer.style.left, top: layer.style.top,
++      width: layer.style.width, height: layer.style.height,
++      widthLocked: layer.dataset.hfWidthLocked === '1',
++      heightLocked: layer.dataset.hfHeightLocked === '1',
++    };
++  }
++
++  function restoreBox(layer, box) {
++    for (const key of ['left', 'top', 'width', 'height']) layer.style[key] = box[key];
++    if (box.widthLocked) layer.dataset.hfWidthLocked = '1';
++    else delete layer.dataset.hfWidthLocked;
++    if (box.heightLocked) layer.dataset.hfHeightLocked = '1';
++    else delete layer.dataset.hfHeightLocked;
++  }
++
+   function undo() {
++    // The canvas is hidden while the board is up and the exit animation is
++    // still measured against it. Ctrl/Cmd+Z reaches this even though the
++    // toolbar button is disabled, so the guard lives with the mutation.
++    if (state.exploded || state.transitioning) return;
+     const last = state.undo.pop();
++    if (!last) {
++      window.__viscraftWorkbench?.undoReset?.();
++      return;
++    }
+     if (last) {
+       if (last.type === 'text') {
+         last.slot.innerHTML = last.html;
+-        refit(last.layer);
++        restoreBox(last.layer, last.box);
++        syncPanel();
+       } else if (last.type === 'style') {
+         last.slots.forEach((s, i) => { s.style[last.prop] = last.before[i]; });
+-        refit(last.layer);
++        restoreBox(last.layer, last.box);
++        syncPanel();
++      } else if (last.type === 'layout') {
++        for (const item of last.items) restoreBox(item.el, item.box);
++        syncPanel();
+       } else if (last.type === 'remove') {
+         last.parent.insertBefore(last.el, last.next);
+         state.layers.splice(last.idx, 0, { el: last.el, id: last.id });
+@@ -1308,7 +1390,11 @@
+       const row = h('<div class="hf-layer"><span class="dot"></span><span class="nm"></span><span class="pos"></span></div>');
+       row.querySelector('.nm').textContent = id;
+       row.addEventListener('click', async () => {
++        // Never select against the hidden canvas; wait out an exit that is
++        // already running and only act if the editor really returned.
++        if (state.transitioning) return;
+         if (state.exploded) await setExploded(false);
++        if (state.exploded) return;
+         select(el);
+       });
+       list.appendChild(row);
+@@ -1340,10 +1426,16 @@
+       $('fs-val').textContent = Math.round(parseFloat(getComputedStyle(slots[0]).fontSize)) + 'px';
+       $('fs-up').disabled = $('fs-down').disabled = false;
+     } else {
+-      $('fs-val').textContent = '无文字';
++      $('fs-val').textContent = 'No text';
+       $('fs-up').disabled = $('fs-down').disabled = true;
+     }
+     $('ff').disabled = !slots.length;
++    if (slots.length) {
++      const family = getComputedStyle(slots[0]).fontFamily;
++      const current = $('ff').options[0];
++      current.textContent = `${family} (current)`;
++      $('ff').value = '';
++    }
+   }
+
+   /* ---------------------------------------------------------------
+@@ -1353,7 +1445,7 @@
+
+   function beginEdit(slot, layer) {
+     if (edit) endEdit(true);
+-    edit = { slot, layer, html: slot.innerHTML };
++    edit = { slot, layer, html: slot.innerHTML, box: boxState(layer) };
+     slot.setAttribute('contenteditable', 'plaintext-only');
+     slot.classList.add('hf-editing');
+     updateResizeOverlay();
+@@ -1367,14 +1459,14 @@
+
+   function endEdit(commit = true) {
+     if (!edit) return;
+-    const { slot, layer, html } = edit;
++    const { slot, layer, html, box } = edit;
+     edit = null;
+     slot.removeAttribute('contenteditable');
+     slot.classList.remove('hf-editing');
+     if (!commit) {
+       slot.innerHTML = html;
+     } else if (slot.innerHTML !== html) {
+-      pushUndo({ type: 'text', slot, layer, html });
++      pushUndo({ type: 'text', slot, layer, html, box });
+       refit(layer);
+       touch();
+     }
+@@ -1413,11 +1505,19 @@
+
+   document.addEventListener('keydown', (e) => {
+     if (!edit) return;
+-    // 输入法组字期间按键一律归输入法，此时的 Esc 是取消组字而不是退出编辑
++    // IME composition owns every key, including Esc (which cancels the composition)
+     if (e.isComposing || e.keyCode === 229) return;
++    // Saving must include the text still being edited, so commit and let the
++    // host save before the generic stopPropagation below swallows the key.
++    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
++      e.preventDefault();
++      endEdit(true);
++      window.__viscraftWorkbench?.save?.();
++      return;
++    }
+     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); endEdit(true); }
+     else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
+-    e.stopPropagation();   // 方向键交给光标，别拿去挪图层
++    e.stopPropagation();   // arrows belong to the caret, not the layer
+   }, true);
+
+   /* ---------------------------------------------------------------
+@@ -1429,9 +1529,10 @@
+   function applyStyle(layer, prop, valueOf) {
+     const slots = slotsOf(layer);
+     if (!slots.length) return;
++    const box = boxState(layer);
+     const before = slots.map((s) => s.style[prop]);
+     slots.forEach((s) => { s.style[prop] = valueOf(s); });
+-    pushUndo({ type: 'style', slots, layer, prop, before });
++    pushUndo({ type: 'style', slots, layer, prop, before, box });
+     refit(layer);
+     touch();
+   }
+@@ -1441,34 +1542,45 @@
+
+   const setFont = (layer, value) => applyStyle(layer, 'fontFamily', () => value);
+
+-  /* 字体选项只从海报 :root 已声明的字体族变量里取。
+-     不提供任意字体：那需要动态注入 @font-face，中文字体动辄数 MB，
+-     且导出后若引用丢失会静默回落成系统字体。 */
++  // Use the document's actual font faces/stacks and portable generic families.
++  // Choosing a font never downloads one or invents an installed font library.
+   function fontOptions() {
+     const out = [], seen = new Set();
+-    for (const sheet of document.styleSheets) {
+-      let rules;
+-      try { rules = sheet.cssRules; } catch { continue; }   // 跨域样式表（如 Google Fonts）不可读
+-      for (const rule of rules) {
+-        if (!rule.style || !rule.selectorText) continue;
+-        if (!/(^|,)\s*(:root|html)\s*(,|$)/.test(rule.selectorText)) continue;
+-        for (const prop of rule.style) {
+-          if (!prop.startsWith('--') || seen.has(prop)) continue;
+-          const val = rule.style.getPropertyValue(prop).trim();
+-          if (!/serif|sans|mono|cursive|fantasy/i.test(val)) continue;
+-          seen.add(prop);
+-          out.push({ label: prop.slice(2), value: `var(${prop})` });
+-        }
+-      }
+-    }
++    const add = (label, value) => {
++      const key = value.replace(/['"]/g, '').replace(/\s*,\s*/g, ',').toLowerCase();
++      if (!value || seen.has(key)) return;
++      seen.add(key);
++      out.push({ label, value });
++    };
++    document.fonts.forEach(face => {
++      if (face.status !== 'error') add(`${face.family} (project font)`, face.family);
++    });
++    for (const { el } of state.layers) {
++      for (const slot of slotsOf(el)) {
++        const family = getComputedStyle(slot).fontFamily;
++        add(family, family);
++      }
++    }
++    const rootStyle = getComputedStyle(document.documentElement);
++    for (let i = 0; i < rootStyle.length; i++) {
++      const prop = rootStyle[i];
++      if (!prop.startsWith('--')) continue;
++      const value = rootStyle.getPropertyValue(prop).trim();
++      if (/font|typeface/i.test(prop) || /serif|sans|mono|cursive|fantasy/i.test(value)) {
++        if (CSS.supports('font-family', value)) add(prop.slice(2), `var(${prop})`);
++      }
++    }
++    add('System sans-serif', 'sans-serif');
++    add('System serif', 'serif');
++    add('System monospace', 'monospace');
+     return out;
+   }
+
+   function buildFontSelect() {
+     const opts = fontOptions();
+-    if (!opts.length) { $('ff-field').hidden = true; return; }
+     const sel = $('ff');
+-    sel.append(h('<option value="">（保持原样）</option>'));
++    sel.title = 'Project fonts and system families. System font appearance varies by device.';
++    sel.append(h('<option value="">Current font</option>'));
+     for (const o of opts) {
+       const el = h('<option></option>');
+       el.value = o.value;
+@@ -1495,92 +1607,19 @@
+     state.sel = null;
+     rebuildPanel();
+     touch();
+-    toast(`已删除 ${id}`);
++    toast(`Deleted ${id}`);
+   }
+
+   /* ---------------------------------------------------------------
+-   * 11. 草稿：localStorage 自动保存，刷新与误关不丢
++   * 11. Host save hook
++   *
++   * Upstream persisted a browser draft here. The workbench owns
++   * recovery and the real save, so edits are only announced to the
++   * host; nothing is treated as saved until the Runtime confirms it.
+    * ------------------------------------------------------------- */
+-  let draftTimer;
+   function touch() {
+-    clearTimeout(draftTimer);
+-    draftTimer = setTimeout(saveDraft, 500);
+-  }
+-
+-  function snapshot() {
+-    return {
+-      at: Date.now(),
+-      removed: state.removed,
+-      layers: state.layers.map(({ el, id }) => ({
+-        id,
+-        left: parseFloat(el.style.left) || 0,
+-        top: parseFloat(el.style.top) || 0,
+-        width: el.style.width || '',
+-        height: el.style.height || '',
+-        manualWidth: el.dataset.hfWidthLocked === '1',
+-        manualHeight: el.dataset.hfHeightLocked === '1',
+-        slots: slotsOf(el).map((s) => ({
+-          html: s.innerHTML, fs: s.style.fontSize || '', ff: s.style.fontFamily || '',
+-        })),
+-      })),
+-    };
+-  }
+-
+-  function saveDraft() {
+-    try {
+-      localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot()));
+-    } catch (err) {
+-      console.warn('[layer-editor] 草稿保存失败', err);
+-    }
+-  }
+-
+-  function loadDraft() {
+-    try {
+-      const raw = localStorage.getItem(DRAFT_KEY);
+-      return raw ? JSON.parse(raw) : null;
+-    } catch { return null; }
+-  }
+-
+-  // 自动恢复，同时给出「丢弃草稿」入口 —— 默认不丢失用户的改动
+-  function applyDraft(d) {
+-    const byId = new Map(state.layers.map((l) => [l.id, l.el]));
+-    for (const rec of d.layers || []) {
+-      const el = byId.get(rec.id);
+-      if (!el) continue;
+-      el.style.left = px(rec.left);
+-      el.style.top = px(rec.top);
+-      if (rec.width) el.style.width = rec.width;
+-      if (rec.height) el.style.height = rec.height;
+-      if (rec.manualWidth) el.dataset.hfWidthLocked = '1';
+-      if (rec.manualHeight) el.dataset.hfHeightLocked = '1';
+-      const slots = slotsOf(el);
+-      (rec.slots || []).forEach((s, i) => {
+-        if (!slots[i]) return;
+-        if (s.html !== undefined) slots[i].innerHTML = s.html;
+-        if (s.fs) slots[i].style.fontSize = s.fs;
+-        if (s.ff) slots[i].style.fontFamily = s.ff;
+-      });
+-    }
+-    for (const id of d.removed || []) {
+-      const idx = state.layers.findIndex((l) => l.id === id);
+-      if (idx < 0) continue;
+-      state.layers[idx].el.remove();
+-      state.layers.splice(idx, 1);
+-      state.removed.push(id);
+-    }
+-  }
+-
+-  function showDraftBar(d) {
+-    const t = new Date(d.at);
+-    const pad = (n) => String(n).padStart(2, '0');
+-    $('draft-msg').textContent =
+-      `已恢复草稿（${pad(t.getMonth() + 1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}）`;
+-    $('draft').hidden = false;
+-  }
+-
+-  function dropDraft() {
+-    localStorage.removeItem(DRAFT_KEY);
+-    location.reload();
++    const host = window.__viscraftWorkbench;
++    if (host && typeof host.changed === 'function') host.changed();
+   }
+
+   /* ---------------------------------------------------------------
+@@ -1591,31 +1630,88 @@
+       const g = geom(el);
+       return `[data-layer-id="${id}"]{ left:${round(g.left)}px; top:${round(g.top)}px; width:${round(g.width)}px; height:${round(g.height)}px; }`;
+     });
+-    return '/* 图层定位（前提是各图层均为 position:absolute，父级为画布） */\n' + rules.join('\n');
+-  }
+-
+-  function fullHTML() {
+-    endEdit(true);
+-    const doc = document.documentElement.cloneNode(true);
+-    doc.querySelectorAll('.hf-bar,.hf-panel,.hf-modal,.hf-toast,.hf-guides,.hf-resize-overlay').forEach((n) => n.remove());
+-    doc.querySelectorAll('link[href*="layer-editor"],script[src*="layer-editor"]').forEach((n) => n.remove());
+-
+-    const cv = doc.querySelector('.hf-canvas');
+-    cv.style.transform = '';
+-    doc.querySelector('.hf-stage-wrap').replaceWith(cv);
+-    doc.querySelector('body').removeAttribute('class');
+-    doc.querySelectorAll('[contenteditable]').forEach((n) => n.removeAttribute('contenteditable'));
+-    doc.querySelectorAll('[class*="hf-"]').forEach((n) => {
+-      n.classList.remove('hf-canvas', 'hf-draggable', 'hf-sel', 'hf-slot', 'hf-editing');
+-      if (!n.getAttribute('class')) n.removeAttribute('class');
+-    });
+-    // data-hf-ready 挂在 <html> 上，会被 cloneNode 一起带走
+-    for (const n of [doc, ...doc.querySelectorAll('*')]) {
+-      for (const attr of [...n.attributes]) {
+-        if (attr.name.startsWith('data-hf-')) n.removeAttribute(attr.name);
+-      }
+-    }
+-    return '<!doctype html>\n' + doc.outerHTML;
++    return '/* Layer positions (all layers must be position:absolute inside the canvas) */\n' + rules.join('\n');
++  }
++
++  // The path from a layer to one of its slots, as child indices. The host
++  // stores this instead of a selector or a markup copy: the saved document is
++  // still the author's own HTML, so the only thing a record may say about a
++  // slot is "this one, and here is its new text".
++  function pathOf(layer, node) {
++    const path = [];
++    let cur = node;
++    while (cur && cur !== layer) {
++      const parent = cur.parentElement;
++      if (!parent) return null;
++      path.unshift([...parent.children].indexOf(cur));
++      cur = parent;
++    }
++    return cur === layer ? path : null;
++  }
++
++  // Report only what the user actually changed, measured against the author
++  // source: offsets from the layer's own layout position, explicit sizes the
++  // user set, width/height locks, changed text slots, changed slot fonts and
++  // deleted layers. Nothing here is a serialization of the live document, so
++  // a layer an author script creates on every load is never written back as
++  // saved markup.
++  //
++  // `commit` ends an in-progress text edit so its refit is measured. An
++  // automatic save passes `false`: it reports the text on screen without
++  // touching the caret or pushing an undo entry.
++  function editState({ commit = false } = {}) {
++    if (commit) endEdit(true);
++    const layers = [];
++    const texts = [];
++    const fonts = [];
++
++    for (const { el, id } of state.layers) {
++      const start = state.initial.get(id);
++      const base = state.baseMoves.get(id) || {};
++      if (start) {
++        const left = parseFloat(el.style.left);
++        const top = parseFloat(el.style.top);
++        const width = parseFloat(el.style.width);
++        const height = parseFloat(el.style.height);
++        const dx = round((Number.isFinite(left) ? left : start.left) - start.left
++          + (Number.isFinite(base.dx) ? base.dx : 0));
++        const dy = round((Number.isFinite(top) ? top : start.top) - start.top
++          + (Number.isFinite(base.dy) ? base.dy : 0));
++        const w = Number.isFinite(width) ? width : start.width;
++        const h = Number.isFinite(height) ? height : start.height;
++        const entry = { id };
++        if (dx) entry.dx = dx;
++        if (dy) entry.dy = dy;
++        // A layer already carrying a recorded size keeps it until the user
++        // resizes; a fresh layer only records a size the user really set.
++        if (Number.isFinite(base.width) || Math.abs(w - start.width) > 0.05) entry.width = round(w);
++        if (Number.isFinite(base.height) || Math.abs(h - start.height) > 0.05) entry.height = round(h);
++        if (el.dataset.hfWidthLocked === '1') entry.lockWidth = true;
++        if (el.dataset.hfHeightLocked === '1') entry.lockHeight = true;
++        if (entry.dx || entry.dy || 'width' in entry || 'height' in entry
++          || entry.lockWidth || entry.lockHeight) {
++          layers.push(entry);
++        }
++      }
++
++      for (const slot of slotsOf(el)) {
++        const path = pathOf(el, slot);
++        if (!path) continue;
++        const text = state.textBase.get(slot);
++        if (typeof text === 'string' && slot.innerHTML !== text) {
++          texts.push({ layer: id, path, from: text, html: slot.innerHTML });
++        }
++        const baseFont = state.fontBase.get(slot);
++        if (!baseFont) continue;
++        const size = slot.style.fontSize || '';
++        const family = slot.style.fontFamily || '';
++        if (size !== baseFont.size || family !== baseFont.family) {
++          fonts.push({ layer: id, path, from: { size: baseFont.size, family: baseFont.family }, to: { size, family } });
++        }
++      }
++    }
++
++    return { version: 1, layers, texts, fonts, removed: state.removed.slice() };
+   }
+
+   const EXPLODED_EXPORT_CSS = `
+@@ -1680,7 +1776,7 @@
+     style.textContent = EXPLODED_EXPORT_CSS;
+     head.appendChild(style);
+     const title = head.querySelector('title');
+-    if (title) title.textContent += ' · 分层展示';
++    if (title) title.textContent += ' · Layer view';
+
+     const body = doc.querySelector('body');
+     body.textContent = '';
+@@ -1696,7 +1792,7 @@
+     shell.appendChild(spread.board);
+     body.appendChild(shell);
+     const replay = Object.assign(document.createElement('button'), {
+-      className: 'hf-exploded-replay', textContent: '↻ 再次播放分层动画', type: 'button',
++      className: 'hf-exploded-replay', textContent: '↻ Replay layer animation', type: 'button',
+     });
+     body.appendChild(replay);
+
+@@ -1779,36 +1875,6 @@
+     return '<!doctype html>\n' + doc.outerHTML;
+   }
+
+-  function downloadBlob(html, name) {
+-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+-    const a = Object.assign(document.createElement('a'), { href: url, download: name });
+-    document.body.appendChild(a);
+-    a.click();
+-    a.remove();
+-    URL.revokeObjectURL(url);
+-    toast('已下载 ' + name);
+-  }
+-
+-  function download() {
+-    const html = fullHTML();
+-    const base = (location.pathname.split('/').pop() || 'poster').replace(/\.html?$/i, '');
+-    const name = (/^(editor|index)$/i.test(base) ? 'index' : base) + '.edited.html';
+-    downloadBlob(html, name);
+-  }
+-
+-  function downloadExploded() {
+-    const base = (location.pathname.split('/').pop() || 'poster').replace(/\.html?$/i, '');
+-    const name = (/^(editor|index)$/i.test(base) ? 'index' : base) + '.layers.html';
+-    downloadBlob(explodedHTML(), name);
+-  }
+-
+-  function openModal(title, text) {
+-    $('modal-title').textContent = title;
+-    $('modal-text').value = text;
+-    $('modal').hidden = false;
+-    $('modal-text').select();
+-  }
+-
+   let toastTimer;
+   function toast(msg) {
+     const t = $('toast');
+@@ -1818,51 +1884,30 @@
+     toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
+   }
+
+-  async function copy(text) {
+-    try {
+-      await navigator.clipboard.writeText(text);
+-      toast('已复制到剪贴板');
+-    } catch {
+-      toast('浏览器拒绝了剪贴板访问，请手动复制');
+-    }
+-  }
+-
+   /* ---------------------------------------------------------------
+-   * 13. 接线
++   * 13. Wiring
+    * ------------------------------------------------------------- */
+   function wire() {
+     $('undo').addEventListener('click', undo);
++    $('reset-all').addEventListener('click', () => window.__viscraftWorkbench?.resetAll?.());
+
+     $('reset').addEventListener('click', () => {
+       endEdit(true);
++      pushUndo({ type: 'layout', items: state.layers.map(({ el }) => ({ el, box: boxState(el) })) });
+       for (const { el, id } of state.layers) {
+-        const p = state.initial.get(id);
+-        if (p) {
+-          el.style.left = px(p.left); el.style.top = px(p.top);
+-          el.style.width = px(p.width); el.style.height = px(p.height);
+-          delete el.dataset.hfWidthLocked;
+-          delete el.dataset.hfHeightLocked;
+-        }
+-      }
+-      state.undo.length = 0;
+-      $('undo').disabled = true;
++        const box = state.resetLayout.get(id);
++        if (box) restoreBox(el, box);
++      }
+       syncPanel();
+       touch();
+-      toast('已还原到固化后的初始布局');
++      toast('Layout reset to the measured starting state');
+     });
+
+-    $('save').addEventListener('click', download);
+     $('explode').addEventListener('click', () => setExploded());
+-    $('explode-save').addEventListener('click', downloadExploded);
+-    $('css').addEventListener('click', () => openModal('图层定位 CSS', positionCSS()));
+-    $('modal-copy').addEventListener('click', () => copy($('modal-text').value));
+-    $('modal-close').addEventListener('click', () => { $('modal').hidden = true; });
+-    $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) $('modal').hidden = true; });
+     $('scale').addEventListener('input', (e) => setScale(e.target.value / 100));
+     $('fs-up').addEventListener('click', () => state.sel && scaleFont(state.sel, FS_STEP));
+     $('fs-down').addEventListener('click', () => state.sel && scaleFont(state.sel, 1 / FS_STEP));
+     $('del').addEventListener('click', () => state.sel && removeLayer(state.sel));
+-    $('draft-drop').addEventListener('click', dropDraft);
+     window.addEventListener('resize', () => setScale(fitScale()));
+
+     document.addEventListener('keydown', (e) => {
+@@ -1872,10 +1917,14 @@
+         cancelResize();
+         return;
+       }
+-      if (edit) return;                       // 编辑态的按键由 §8 的 capture 处理器负责
++      if (edit) return;                       // handled by the capture listener in §8
+       const mod = e.metaKey || e.ctrlKey;
+       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); return undo(); }
+-      if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); return download(); }
++      if (mod && e.key.toLowerCase() === 's') {
++        e.preventDefault();
++        window.__viscraftWorkbench?.save?.();
++        return;
++      }
+       if (e.key === 'Escape') return state.exploded ? setExploded(false) : select(null);
+       if (!state.sel) return;
+       if (e.key === 'Delete' || e.key === 'Backspace') {
+@@ -1906,24 +1955,24 @@
+
+   ready().then(() => {
+     bake();
++    state.resetLayout = new Map(state.layers.map(({ el, id }) => [id, boxState(el)]));
+     markSlots();
+     buildUI();
+     buildFontSelect();
+     buildStage();
+     wire();
+-    const draft = loadDraft();
+-    if (draft) { applyDraft(draft); showDraftBar(draft); }
+     rebuildPanel();
+
+-    /* 供 scripts/ 下的离线固化与验证脚本驱动。编辑器不加载时不存在，
+-       导出的 HTML 也不含此脚本，因此不会污染产物。 */
++    /* Automation/host entry point. Absent when the editor is not loaded;
++       exported documents never contain this script. */
+     window.__layerEditor = {
+-      fullHTML, explodedHTML, positionCSS, snapshot, download, downloadExploded, undo, toast,
++      editState, explodedHTML, positionCSS, undo, toast,
+       select, scaleFont, setFont, removeLayer, fontOptions,
+       setExploded,
+       layers: () => state.layers.map(({ el, id }) => ({ el, id })),
++      isEditing: () => Boolean(edit),
+       state,
+     };
+-    document.documentElement.dataset.hfReady = '1';   // 自动化脚本的等待锚点
++    document.documentElement.dataset.hfReady = '1';   // automation wait anchor
+   });
+ })();
+--- a/layer-editor.css
++++ b/layer-editor.css
+@@ -6,7 +6,11 @@
+
+ body.hf-on{
+   display:block;padding:0;margin:0;
+-  background:#15171a;
++  background:#e9e1d5;
++}
++/* Viscraft adaptation: editor typography must not replace the author canvas's
++   inherited font. Keep the UI stack on editor chrome only. */
++.hf-bar,.hf-panel,.hf-toast{
+   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+ }
+
+@@ -14,10 +18,10 @@
+ .hf-stage-wrap{
+   position:fixed;left:0;top:52px;right:300px;bottom:0;
+   overflow:auto;display:flex;align-items:flex-start;justify-content:center;
+-  padding:28px;transition:background-color .24s ease;
++  padding:32px;transition:background-color .24s ease;background:#e9e1d5;
+ }
+ .hf-stage{position:relative;flex:none;}
+-.hf-canvas{transform-origin:top left;}
++.hf-canvas{transform-origin:top left;box-shadow:0 12px 50px #51381d26;outline:1px solid #76533318;}
+
+ /* ---------- 拆解视图：完整总览 + 背景 + 一级内容组件 ---------- */
+ .hf-exploded-board{
+@@ -92,101 +96,103 @@
+ .hf-bar{
+   position:fixed;left:0;right:0;top:0;height:52px;z-index:9000;
+   display:flex;align-items:center;gap:8px;padding:0 14px;
+-  background:#1e2126;border-bottom:1px solid #32363d;color:#e6e8ea;
++  background:#fcf8f1;border-bottom:1px solid #e1d5c5;color:#3f3228;
+   font-size:13px;
+ }
+ .hf-bar .hf-title{
++  display:none;
+   font-weight:600;letter-spacing:.5px;margin-right:6px;
+   max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ }
+-.hf-bar .hf-sep{width:1px;height:22px;background:#3a3f47;margin:0 4px;}
++.hf-bar .hf-sep{display:none;}
++.hf-reset-actions{display:flex;align-items:center;gap:4px;padding-left:10px;margin-left:2px;border-left:1px solid #e1d5c5;}
+ .hf-btn{
+-  appearance:none;border:1px solid #3a3f47;background:#282c33;color:#e6e8ea;
++  appearance:none;border:1px solid #ccbba6;background:#f4ecdf;color:#3f3228;
+   padding:6px 12px;border-radius:6px;font-size:12.5px;cursor:pointer;
+   font-family:inherit;transition:background .12s,border-color .12s;white-space:nowrap;
+ }
+-.hf-btn:hover{background:#333840;border-color:#4a505a;}
+-.hf-btn:active{background:#22262c;}
+-.hf-btn.active{background:#4a3d20;border-color:#a78635;color:#ffe28a;}
+-.hf-btn.primary{background:#2f6f4f;border-color:#3c8a63;}
+-.hf-btn.primary:hover{background:#37805c;}
+-.hf-btn.danger:hover{background:#5d2b2b;border-color:#7a3a3a;}
++.hf-btn:hover{background:#ece0ce;border-color:#aa8b6c;}
++.hf-btn:active{background:#e5d5bf;}
++.hf-btn.active{background:#f1dbca;border-color:#bc8d6a;color:#843c22;}
++.hf-btn.primary{background:#a64b2a;border-color:#a64b2a;color:#fffaf4;}
++.hf-btn.primary:hover{background:#8c3c20;}
++.hf-btn.danger:hover{background:#f5ded3;border-color:#bf8b77;color:#993c29;}
+ .hf-btn[disabled]{opacity:.4;cursor:default;}
+-.hf-btn[disabled]:hover{background:#282c33;border-color:#3a3f47;}
+-.hf-zoom{margin-left:auto;display:flex;align-items:center;gap:8px;color:#9aa2ad;}
+-.hf-zoom output{min-width:46px;text-align:right;font-variant-numeric:tabular-nums;color:#e6e8ea;}
++.hf-btn[disabled]:hover{background:#f4ecdf;border-color:#ccbba6;}
++.hf-zoom{margin-left:auto;display:flex;align-items:center;gap:8px;color:#766451;}
++.hf-zoom output{min-width:46px;text-align:right;font-variant-numeric:tabular-nums;color:#3f3228;}
+
+ /* ---------- 右侧面板 ---------- */
+ .hf-panel{
+   position:fixed;right:0;top:52px;bottom:0;width:300px;z-index:9000;
+-  background:#1e2126;border-left:1px solid #32363d;color:#e6e8ea;
++  background:#fcf8f1;border-left:1px solid #e1d5c5;color:#3f3228;
+   display:flex;flex-direction:column;
+ }
+ .hf-panel h4{
+-  margin:0;padding:13px 14px 9px;font-size:11px;font-weight:600;
+-  letter-spacing:1.4px;text-transform:uppercase;color:#7d8792;
++  margin:0;padding:20px 18px 12px;font-size:10px;font-weight:600;
++  letter-spacing:1.4px;text-transform:uppercase;color:#87745f;
+   display:flex;align-items:center;gap:8px;
+ }
+-.hf-layers{flex:1;overflow:auto;padding:0 8px 12px;min-height:80px;}
++.hf-layers{flex:1;overflow:auto;padding:0 10px 12px;min-height:80px;}
+ .hf-layer{
+-  display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;
+-  cursor:pointer;font-size:12.5px;color:#c3c9d1;
+-}
+-.hf-layer:hover{background:#282c33;}
+-.hf-layer.sel{background:#2f6f4f;color:#fff;}
+-.hf-layer .dot{width:7px;height:7px;border-radius:50%;background:#5c6470;flex:none;}
+-.hf-layer.sel .dot{background:#9fe3c0;}
++  display:grid;grid-template-columns:7px minmax(0,1fr);align-items:center;gap:5px 11px;padding:11px 12px;border-radius:8px;
++  cursor:pointer;font-size:12.5px;color:#5f4d3e;
++}
++.hf-layer:hover{background:#f4ecdf;}
++.hf-layer.sel{background:#f1dbca;color:#6c351f;}
++.hf-layer .dot{width:7px;height:7px;border-radius:50%;background:#ac9780;flex:none;}
++.hf-layer.sel .dot{background:#a64b2a;}
+ .hf-layer .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+ .hf-layer .pos{
+-  margin-left:auto;font-size:11px;color:#7d8792;font-variant-numeric:tabular-nums;flex:none;
+-}
+-.hf-layer.sel .pos{color:#c8ecd9;}
++  grid-column:2;font-size:10px;color:#87745f;font-variant-numeric:tabular-nums;
++}
++.hf-layer.sel .pos{color:#8a5338;}
+
+ /* ---------- 属性区 ---------- */
+-.hf-props{border-top:1px solid #32363d;padding:4px 14px 12px;}
++.hf-props{border-top:1px solid #e1d5c5;padding:4px 14px 12px;}
+ .hf-props[hidden]{display:none;}
+-.hf-field{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12px;color:#9aa2ad;}
++.hf-field{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12px;color:#766451;}
+ .hf-field > label{width:38px;flex:none;}
+ .hf-field select{
+-  flex:1;appearance:none;background:#282c33;color:#e6e8ea;font-family:inherit;
+-  border:1px solid #3a3f47;border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer;
++  flex:1;appearance:none;background:#f4ecdf;color:#3f3228;font-family:inherit;
++  border:1px solid #ccbba6;border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer;
+ }
+ .hf-step{display:flex;align-items:center;gap:6px;}
+ .hf-step .hf-btn{padding:4px 10px;font-size:13px;line-height:1;}
+ .hf-step .val{
+-  min-width:52px;text-align:center;color:#e6e8ea;
++  min-width:52px;text-align:center;color:#3f3228;
+   font-variant-numeric:tabular-nums;font-size:12px;
+ }
+ .hf-props .hf-btn.danger{width:100%;margin-top:2px;}
+
+ .hf-hint{
+-  padding:12px 14px;border-top:1px solid #32363d;font-size:11.5px;
+-  line-height:1.85;color:#7d8792;
++  padding:12px 14px;border-top:1px solid #e1d5c5;font-size:11.5px;
++  line-height:1.85;color:#87745f;
+ }
+ .hf-hint kbd{
+-  background:#282c33;border:1px solid #3a3f47;border-radius:4px;
++  background:#f4ecdf;border:1px solid #ccbba6;border-radius:4px;
+   padding:1px 5px;font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+-  color:#c3c9d1;
+-}
+-.hf-hint b{color:#c3c9d1;font-weight:600;}
++  color:#5f4d3e;
++}
++.hf-hint b{color:#5f4d3e;font-weight:600;}
+
+ /* ---------- 草稿条 ---------- */
+ .hf-draft{
+   display:flex;align-items:center;gap:8px;padding:9px 14px;
+-  background:#2a2f2a;border-bottom:1px solid #3a4a3a;
+-  font-size:11.5px;color:#9fe3c0;
++  background:#f5ebdc;border-bottom:1px solid #d5bea2;
++  font-size:11.5px;color:#a64b2a;
+ }
+ .hf-draft[hidden]{display:none;}
+ .hf-draft .hf-btn{padding:3px 8px;font-size:11px;margin-left:auto;}
+
+ /* ---------- 图层的可拖拽 / 选中态 ---------- */
+ .hf-draggable{cursor:grab;}
+-.hf-draggable:hover{outline:1px dashed rgba(159,227,192,.55);outline-offset:3px;}
++.hf-draggable:hover{outline:1px dashed rgba(166,75,42,.55);outline-offset:3px;}
+ .hf-draggable.hf-sel{
+   outline:none;cursor:grab;
+ }
+ .hf-resize-overlay{
+-  position:absolute;z-index:9999;border:1px dashed #38bdf8;
++  position:absolute;z-index:9999;border:1px dashed #a64b2a;
+   pointer-events:none;
+ }
+ .hf-resize-overlay[hidden]{display:none;}
+@@ -196,11 +202,11 @@
+ }
+ .hf-resize-handle::after{
+   content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;
+-  transform:translate(-50%,-50%);border:1px solid #11633d;border-radius:2px;
+-  background:#4ade80;box-shadow:0 0 0 1px rgba(255,255,255,.8),0 1px 5px rgba(17,24,39,.24);
+-}
+-.hf-resize-handle:hover::after{width:14px;height:14px;background:#86efac;}
+-.hf-resize-handle.active::after{width:14px;height:14px;background:#bbf7d0;}
++  transform:translate(-50%,-50%);border:1px solid #fff8ed;border-radius:2px;
++  background:#a64b2a;box-shadow:0 0 0 1px rgba(255,255,255,.8),0 1px 5px rgba(17,24,39,.24);
++}
++.hf-resize-handle:hover::after{width:14px;height:14px;background:#c46c45;}
++.hf-resize-handle.active::after{width:14px;height:14px;background:#d88a60;}
+ .hf-resize-handle.nw{left:0;top:0;transform:translate(-50%,-50%);cursor:nwse-resize;}
+ .hf-resize-handle.n{left:50%;top:0;transform:translate(-50%,-50%);cursor:ns-resize;}
+ .hf-resize-handle.ne{right:0;top:0;transform:translate(50%,-50%);cursor:nesw-resize;}
+@@ -210,18 +216,18 @@
+ .hf-resize-handle.sw{left:0;bottom:0;transform:translate(-50%,50%);cursor:nesw-resize;}
+ .hf-resize-handle.w{left:0;top:50%;transform:translate(-50%,-50%);cursor:ew-resize;}
+ .hf-resize-handle:is(.n,.e,.s,.w){z-index:2;}
+-.hf-size-val{color:#e6e8ea;font-variant-numeric:tabular-nums;}
++.hf-size-val{color:#3f3228;font-variant-numeric:tabular-nums;}
+
+ /* ---------- 文本编辑态 ---------- */
+ /* 选中图层后才提示哪些文字可编辑；否则整张海报都是文本光标，反而看不出能拖 */
+ .hf-sel .hf-slot:hover,
+ .hf-sel.hf-slot:hover{
+-  outline:1px dashed #38bdf8;outline-offset:2px;cursor:text;
++  outline:1px dashed #a64b2a;outline-offset:2px;cursor:text;
+ }
+ .hf-editing{
+-  outline:2px solid #38bdf8;outline-offset:2px;
+-  background:rgba(56,189,248,.10);
+-  cursor:text;caret-color:#38bdf8;
++  outline:2px solid #a64b2a;outline-offset:2px;
++  background:rgba(166,75,42,.1);
++  cursor:text;caret-color:#a64b2a;
+   -webkit-user-modify:read-write-plaintext-only;
+ }
+ /* 编辑中的图层让位给文本框，不再显示拖拽提示 */
+@@ -229,34 +235,50 @@
+
+ /* ---------- 吸附辅助线 ---------- */
+ .hf-guides{position:absolute;inset:0;pointer-events:none;z-index:9998;}
+-.hf-guide{position:absolute;background:#ff2d8a;}
++.hf-guide{position:absolute;background:#b96236;}
+ .hf-guide.v{width:1px;top:0;bottom:0;}
+ .hf-guide.h{height:1px;left:0;right:0;}
+
+ /* ---------- 弹窗 ---------- */
+ .hf-modal{
+-  position:fixed;inset:0;z-index:9500;background:rgba(8,10,12,.72);
++  position:fixed;inset:0;z-index:9500;background:rgba(71,49,29,.28);
+   display:flex;align-items:center;justify-content:center;padding:40px;
+ }
+ .hf-modal[hidden]{display:none;}
+ .hf-modal .box{
+-  width:min(760px,100%);max-height:100%;background:#1e2126;border:1px solid #3a3f47;
++  width:min(760px,100%);max-height:100%;background:#fcf8f1;border:1px solid #ccbba6;
+   border-radius:10px;display:flex;flex-direction:column;overflow:hidden;
+ }
+ .hf-modal .box header{
+-  padding:14px 16px;border-bottom:1px solid #32363d;color:#e6e8ea;
++  padding:14px 16px;border-bottom:1px solid #e1d5c5;color:#3f3228;
+   font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;
+ }
+ .hf-modal .box header .hf-spacer{margin-left:auto;}
+ .hf-modal textarea{
+   flex:1;min-height:340px;border:0;outline:0;resize:none;padding:14px 16px;
+-  background:#15171a;color:#c3c9d1;line-height:1.65;
++  background:#e9e1d5;color:#5f4d3e;line-height:1.65;
+   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+ }
+
+ .hf-toast{
+   position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:9600;
+-  background:#2f6f4f;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;
+-  box-shadow:0 8px 24px rgba(0,0,0,.4);
++  background:#a64b2a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;
++  box-shadow:0 8px 24px rgba(71,49,29,.18);
+ }
+ .hf-toast[hidden]{display:none;}
++
++/* Viscraft chrome: warm paper surfaces and a terracotta accent shared with the host shell. */
++.hf-bar{padding-inline:20px;}
++.hf-btn{border-radius:7px;}
++.hf-btn:focus-visible,.hf-field select:focus-visible{outline:2px solid #a64b2a;outline-offset:2px;}
++.hf-zoom input{accent-color:#a64b2a;}
++.hf-layer.sel{box-shadow:inset 2px 0 #a64b2a;background:#a64b2a12;}
++.hf-layer .nm{font-weight:500;}
++.hf-field select{min-width:0;}
++.hf-hint{padding:14px 18px;border-top:1px solid #e1d5c5;}
++.hf-shortcuts summary{cursor:pointer;list-style:none;font-size:11px;color:#766451;}
++.hf-shortcuts summary::after{content:'+';float:right;color:#a64b2a;}
++.hf-shortcuts[open] summary{margin-bottom:12px;}
++.hf-shortcuts[open] summary::after{content:'−';}
++.hf-shortcuts summary::-webkit-details-marker{display:none;}
++.hf-panel,.hf-stage-wrap{scrollbar-width:thin;scrollbar-color:#c7b49d transparent;}

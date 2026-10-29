@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viscraft · orbital study</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #03040a;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        object-fit: contain;
+      }
+      .hint {
+        position: fixed;
+        left: 10px;
+        bottom: 8px;
+        font:
+          11px/1.4 ui-monospace,
+          monospace;
+        color: #5a6b96;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" width="640" height="360"></canvas>
+    <div class="hint" id="hint">
+      Viscraft orbital study · offline capture is a pure function of (frame, seed, params)
+    </div>
+    <script>
+      /*
+       * Viscraft CodeScene: a CPU-only Canvas orbital / solar-system renderer.
+       *
+       * This is an ORIGINAL code-authored subject. It does not load, embed or sample
+       * any external media, model, CDN or font. The piece exists to be re-authored
+       * against the *timing* of a reference edit: when create-orbital.mjs analyses a
+       * reference cut list, every reference segment becomes one code source here, and
+       * the segment's global start frame is passed in so the subject can match the
+       * incoming/outgoing cut rhythm while replacing the reference's actual imagery
+       * with drawn orbital geometry.
+       *
+       * Offline capture contract (see src/backends/browser/capture.ts):
+       *   window.viscraft = {
+       *     ready?: async () => void,
+       *     render: ({ frame, time, fps, width, height, seed, params, bindings }) => void,
+       *     dispose?: () => void,
+       *   }
+       *
+       * Determinism: every pixel drawn for frame i is a pure function of
+       * (fps, frame, seed, params). No Date.now(), no Math.random(), no requestAnimationFrame
+       * time is consulted while the page is externally driven. The on-load preview
+       * loop only exists so the file can be opened directly in a browser; the first
+       * external render() call cancels it permanently.
+       *
+       * params (all optional):
+       *   layout           'orbital' | 'solar' | 'eclipsing' | 'binary' | 'spiral' | 'lockup'
+       *   variant          integer selecting camera arrangement (tilt / zoom / yaw)
+       *   globalStartFrame frame this segment begins on in the global timeline
+       *   segmentFrames    length of this segment in frames (drives in/out cut rhythm)
+       *   palette          array of CSS hex accent colours
+       *   duration         fallback segment seconds when segmentFrames is absent (preview)
+       *   referenceSha     (informational, never rendered) SHA-256 of the analysed reference
+       *   intensity        overall energy multiplier
+       */
+      (function () {
+        'use strict';
+
+        var canvas = document.getElementById('stage');
+        var ctx = canvas.getContext('2d', { alpha: false });
+        var hint = document.getElementById('hint');
+
+        var ORBITAL = ['#ffd166', '#ff8f5a', '#4dabf7', '#b28dff', '#7cf0ff'];
+        var LAYOUTS = ['orbital', 'solar', 'eclipsing', 'binary', 'spiral', 'lockup'];
+
+        var DEFAULT_PARAMS = {
+          layout: 'orbital',
+          variant: 0,
+          globalStartFrame: 0,
+          segmentFrames: 0,
+          palette: ORBITAL,
+          duration: 6,
+          intensity: 1,
+          referenceSha: '',
+        };
+
+        // ---------- deterministic math ----------
+        var TAU = Math.PI * 2;
+        function clamp(v, a, b) {
+          return v < a ? a : v > b ? b : v;
+        }
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+        function smoothstep(e0, e1, x) {
+          var t = clamp((x - e0) / (e1 - e0), 0, 1);
+          return t * t * (3 - 2 * t);
+        }
+        function easeOutCubic(t) {
+          t = clamp(t, 0, 1);
+          return 1 - Math.pow(1 - t, 3);
+        }
+        function easeInOutCubic(t) {
+          t = clamp(t, 0, 1);
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function mulberry32(seed) {
+          var a = seed >>> 0;
+          return function () {
+            a = (a + 0x6d2b79f5) >>> 0;
+            var t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        function hashString(s) {
+          var h = 2166136261 >>> 0;
+          for (var i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 16777619);
+          }
+          return h >>> 0;
+        }
+
+        function hexToRgb(hex) {
+          var h = String(hex).replace('#', '');
+          if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+          var n = parseInt(h, 16);
+          if (!isFinite(n)) n = 0;
+          return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        }
+        function rgba(c, a) {
+          return 'rgba(' + (c.r | 0) + ',' + (c.g | 0) + ',' + (c.b | 0) + ',' + a + ')';
+        }
+        function mix(a, b, t) {
+          return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
+        }
+        function lighten(c, t) {
+          return mix(c, { r: 255, g: 255, b: 255 }, t);
+        }
+        function darken(c, t) {
+          return mix(c, { r: 0, g: 0, b: 0 }, t);
+        }
+
+        // ---------- scene state ----------
+        function makeState(o) {
+          var p = Object.assign({}, DEFAULT_PARAMS, o.params || {});
+          var rawPal = Array.isArray(p.palette) && p.palette.length ? p.palette : DEFAULT_PARAMS.palette;
+          var fps = o.fps || 30;
+          var frame = o.frame | 0;
+          var segFrames = p.segmentFrames | 0;
+          if (segFrames <= 0) segFrames = Math.max(1, Math.round((p.duration || 6) * fps));
+          return {
+            p: p,
+            pal: rawPal.map(hexToRgb),
+            layout: LAYOUTS.indexOf(p.layout) >= 0 ? p.layout : 'orbital',
+            seed: o.seed | 0,
+            frame: frame,
+            time: typeof o.time === 'number' ? o.time : frame / fps,
+            fps: fps,
+            width: o.width,
+            height: o.height,
+            min: Math.min(o.width, o.height),
+            s: Math.min(o.width, o.height) / 360,
+            segFrames: segFrames,
+            globalStartFrame: p.globalStartFrame | 0,
+            tGlobal: ((p.globalStartFrame | 0) + frame) / fps,
+            tLocal: frame / fps,
+            intensity: typeof p.intensity === 'number' ? p.intensity : 1,
+          };
+        }
+
+        // Deterministic camera per (layout, variant, seed). Multiple arrangements so
+        // consecutive segments read as genuinely different shots of the same subject.
+        function cameraFor(st) {
+          var seed = (st.seed ^ hashString(st.layout) ^ Math.imul((st.p.variant | 0) + 1, 0x9e3779b1)) >>> 0;
+          var r = mulberry32(seed);
+          var variants = 4;
+          var v = (((st.p.variant | 0) % variants) + variants) % variants;
+          return {
+            inc: 0.18 + r() * 0.62 + v * 0.07, // plane inclination (0 flat .. ~1 steep)
+            rot: r() * TAU, // orbit rotation on screen
+            zoom: 0.86 + r() * 0.4 + v * 0.04, // scale multiplier
+            cx: (0.5 + (r() - 0.5) * 0.16) * st.width, // centre x
+            cy: (0.52 + (r() - 0.5) * 0.14) * st.height,
+            yaw: (r() - 0.5) * 0.5,
+          };
+        }
+
+        function bodiesFor(st) {
+          var r = mulberry32((st.seed ^ 0x51ed270b) >>> 0);
+          var n, rings;
+          switch (st.layout) {
+            case 'solar':
+              n = 4;
+              rings = 2;
+              break;
+            case 'eclipsing':
+              n = 3;
+              rings = 1;
+              break;
+            case 'binary':
+              n = 4;
+              rings = 2;
+              break;
+            case 'spiral':
+              n = 5;
+              rings = 0;
+              break;
+            case 'lockup':
+              n = 4;
+              rings = 2;
+              break;
+            default:
+              n = 3;
+              rings = 2;
+              break;
+          }
+          var bodies = [];
+          for (var i = 0; i < n; i++) {
+            var idx = i;
+            bodies.push({
+              a: 0.3 + r() * 0.62, // semi-major axis, fraction of stage
+              ecc: 0.1 + r() * 0.34, // flattening of the ellipse
+              phase: r() * TAU,
+              period: 5.5 + r() * 9.5, // seconds per revolution
+              size: 5 + r() * 13,
+              color: st.pal[(idx + 1) % st.pal.length],
+              spin: (r() - 0.5) * 0.6,
+              band: r(),
+              spark: r(),
+            });
+          }
+          return { bodies: bodies, rings: rings, rng: r };
+        }
+
+        // ---------- layers ----------
+        function drawBackground(st) {
+          var W = st.width,
+            H = st.height,
+            pal = st.pal,
+            t = st.tGlobal;
+          var base = { r: 3, g: 4, b: 10 };
+          var k = 0.14 + 0.05 * Math.sin(t * 0.5 + st.seed * 0.01);
+          var top = mix(base, pal[0], clamp(k, 0, 0.4));
+          var bottom = mix(base, pal[3 % pal.length], clamp(k * 0.7, 0, 0.32));
+          var g = ctx.createLinearGradient(0, 0, W, H);
+          g.addColorStop(0, rgba(darken(top, 0.15), 1));
+          g.addColorStop(0.55, rgba(base, 1));
+          g.addColorStop(1, rgba(darken(bottom, 0.1), 1));
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        var nebulaCache = { key: null, blobs: null };
+        function nebulaBlobs(st) {
+          var key = st.seed + ':' + st.layout + ':' + st.width + 'x' + st.height;
+          if (nebulaCache.key === key) return nebulaCache.blobs;
+          var r = mulberry32((st.seed ^ 0x2545f491 ^ hashString(st.layout)) >>> 0);
+          var blobs = [];
+          var count = 4 + Math.floor(r() * 3);
+          for (var i = 0; i < count; i++) {
+            blobs.push({
+              x: r() * st.width,
+              y: r() * st.height,
+              rad: (0.22 + r() * 0.4) * st.min,
+              color: st.pal[Math.floor(r() * st.pal.length)],
+              drift: 6 + r() * 22,
+              phase: r() * TAU,
+              alpha: 0.05 + r() * 0.09,
+            });
+          }
+          nebulaCache = { key: key, blobs: blobs };
+          return blobs;
+        }
+        function drawNebula(st) {
+          var blobs = nebulaBlobs(st),
+            t = st.tGlobal;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          for (var i = 0; i < blobs.length; i++) {
+            var b = blobs[i];
+            var x = b.x + Math.sin(t * 0.05 + b.phase) * b.drift * st.s;
+            var y = b.y + Math.cos(t * 0.04 + b.phase) * b.drift * 0.6 * st.s;
+            var rad = b.rad * (1 + 0.06 * Math.sin(t * 0.3 + b.phase));
+            var g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+            g.addColorStop(0, rgba(b.color, b.alpha * st.intensity));
+            g.addColorStop(0.6, rgba(b.color, b.alpha * 0.3));
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+          }
+          ctx.restore();
+        }
+
+        var starCache = { key: null, stars: null };
+        function starField(st) {
+          var key = st.seed + ':' + st.width + 'x' + st.height;
+          if (starCache.key === key) return starCache.stars;
+          var r = mulberry32((st.seed ^ 0x9e3779b9) >>> 0);
+          var count = 150 + Math.floor(st.min * 0.35);
+          var stars = [];
+          for (var i = 0; i < count; i++) {
+            stars.push({
+              x: r(),
+              y: r(), // normalised
+              depth: 0.15 + r() * 0.85,
+              size: 0.5 + r() * 1.7,
+              phase: r() * TAU,
+              tw: 0.6 + r() * 2.6,
+              bright: r() < 0.06 ? 1 : 0, // a few hero stars with glow
+            });
+          }
+          starCache = { key: key, stars: stars };
+          return stars;
+        }
+        function drawStars(st) {
+          var stars = starField(st),
+            W = st.width,
+            H = st.height,
+            t = st.tGlobal;
+          var cx = W / 2,
+            cy = H / 2;
+          ctx.save();
+          for (var i = 0; i < stars.length; i++) {
+            var s = stars[i];
+            var rot = t * 0.004 * (0.3 + s.depth);
+            var c = Math.cos(rot),
+              si = Math.sin(rot);
+            var dx = (s.x - 0.5) * W,
+              dy = (s.y - 0.5) * H;
+            var x = cx + dx * c - dy * si;
+            var y = cy + dx * si + dy * c;
+            if (x < -4 || x > W + 4 || y < -4 || y > H + 4) continue;
+            var tw = 0.5 + 0.5 * Math.sin(t * s.tw + s.phase);
+            var a = (0.18 + 0.7 * s.depth) * (0.35 + 0.65 * tw);
+            var size = s.size * st.s * (0.7 + 0.5 * s.depth);
+            if (s.bright) {
+              var g = ctx.createRadialGradient(x, y, 0, x, y, size * 7);
+              g.addColorStop(0, rgba(lighten(st.pal[4 % st.pal.length], 0.5), 0.9 * a));
+              g.addColorStop(0.4, rgba(st.pal[2 % st.pal.length], 0.35 * a));
+              g.addColorStop(1, 'rgba(0,0,0,0)');
+              ctx.fillStyle = g;
+              ctx.fillRect(x - size * 7, y - size * 7, size * 14, size * 14);
+            }
+            ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(0.4, size), 0, TAU);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        function drawSun(st, cam, scale, bright) {
+          var pal = st.pal,
+            t = st.tGlobal,
+            s = st.s * cam.zoom * scale;
+          var R = (st.layout === 'solar' ? 46 : st.layout === 'lockup' ? 34 : 30) * s;
+          var cx = cam.cx,
+            cy = cam.cy;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+
+          // outer corona
+          var glowR = R * 6.2;
+          var gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+          gg.addColorStop(0, rgba(pal[0], 0.5 * bright));
+          gg.addColorStop(0.25, rgba(pal[0], 0.22 * bright));
+          gg.addColorStop(0.6, rgba(pal[1 % pal.length], 0.08 * bright));
+          gg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(cx - glowR, cy - glowR, glowR * 2, glowR * 2);
+
+          // corona rays
+          var rays = st.layout === 'solar' ? 20 : 12;
+          var rot = t * 0.12;
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(rot);
+          for (var i = 0; i < rays; i++) {
+            var ang = (i / rays) * TAU;
+            var len = R * (2.4 + 1.4 * Math.sin(i * 2.1 + t * 0.9));
+            var a = 0.05 + 0.05 * (0.5 + 0.5 * Math.sin(i * 1.7 + t * 1.3));
+            var gg2 = ctx.createLinearGradient(0, 0, Math.cos(ang) * len, Math.sin(ang) * len);
+            gg2.addColorStop(0, rgba(lighten(pal[0], 0.2), a * bright));
+            gg2.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.strokeStyle = gg2;
+            ctx.lineWidth = R * 0.16;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(ang) * R * 0.7, Math.sin(ang) * R * 0.7);
+            ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // core disc
+          var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+          cg.addColorStop(0, rgba(lighten(pal[0], 0.85), 1 * bright));
+          cg.addColorStop(0.5, rgba(lighten(pal[0], 0.35), 0.98 * bright));
+          cg.addColorStop(0.86, rgba(pal[0], 0.95 * bright));
+          cg.addColorStop(1, rgba(pal[1 % pal.length], 0.7 * bright));
+          ctx.fillStyle = cg;
+          ctx.beginPath();
+          ctx.arc(cx, cy, R, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+          return R;
+        }
+
+        // Body position in screen space for a given absolute time.
+        function bodyPos(st, cam, b, time, scale) {
+          var ang = b.phase + TAU * (time / b.period);
+          var a = b.a * st.min * 0.5 * cam.zoom * scale;
+          var bb = a * b.ecc;
+          var px = Math.cos(ang) * a,
+            pz = Math.sin(ang) * bb;
+          var c = Math.cos(cam.rot),
+            si = Math.sin(cam.rot);
+          var rx = px * c - pz * si;
+          var ry = px * si + pz * c;
+          var depth = Math.sin(ang); // -1 far .. +1 near
+          return { x: cam.cx + rx, y: cam.cy + ry * (0.55 + 0.45 * Math.cos(cam.inc)), depth: depth, a: a, b: bb };
+        }
+
+        function drawOrbitPath(st, cam, b, scale, alpha) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(180,205,255,' + alpha + ')';
+          ctx.lineWidth = Math.max(0.5, 0.9 * st.s);
+          ctx.beginPath();
+          var n = 96;
+          for (var i = 0; i <= n; i++) {
+            var ang = (i / n) * TAU;
+            var a = b.a * st.min * 0.5 * cam.zoom * scale;
+            var bb = a * b.ecc;
+            var px = Math.cos(ang) * a,
+              pz = Math.sin(ang) * bb;
+            var c = Math.cos(cam.rot),
+              si = Math.sin(cam.rot);
+            var x = cam.cx + px * c - pz * si;
+            var y = cam.cy + (px * si + pz * c) * (0.55 + 0.45 * Math.cos(cam.inc));
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        function drawTrail(st, cam, b, scale, time, span) {
+          var steps = 26;
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.globalCompositeOperation = 'lighter';
+          var prev = null;
+          for (var i = steps; i >= 0; i--) {
+            var tt = time - (i / steps) * span;
+            var pos = bodyPos(st, cam, b, tt, scale);
+            var f = 1 - i / steps;
+            if (prev) {
+              ctx.strokeStyle = rgba(lighten(b.color, 0.15), 0.42 * f * f);
+              ctx.lineWidth = Math.max(0.6, 2.6 * st.s * f);
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(pos.x, pos.y);
+              ctx.stroke();
+            }
+            prev = pos;
+          }
+          ctx.restore();
+          return prev;
+        }
+
+        function drawBody(st, cam, b, pos, scale, bright) {
+          var r = b.size * st.s * cam.zoom * (0.72 + 0.28 * (pos.depth * 0.5 + 0.5));
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var gg = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r * 5);
+          gg.addColorStop(0, rgba(b.color, 0.35 * bright));
+          gg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(pos.x - r * 5, pos.y - r * 5, r * 10, r * 10);
+          ctx.restore();
+
+          var cg = ctx.createRadialGradient(pos.x - r * 0.35, pos.y - r * 0.35, r * 0.1, pos.x, pos.y, r);
+          cg.addColorStop(0, rgba(lighten(b.color, 0.55), bright));
+          cg.addColorStop(0.7, rgba(b.color, bright));
+          cg.addColorStop(1, rgba(darken(b.color, 0.55), bright));
+          ctx.fillStyle = cg;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, r, 0, TAU);
+          ctx.fill();
+
+          // terminator shading (lit from the star at cam centre)
+          var lx = cam.cx - pos.x,
+            ly = cam.cy - pos.y,
+            ll = Math.hypot(lx, ly) || 1;
+          lx /= ll;
+          ly /= ll;
+          var sg = ctx.createRadialGradient(pos.x - lx * r * 0.5, pos.y - ly * r * 0.5, 0, pos.x, pos.y, r * 1.05);
+          sg.addColorStop(0, 'rgba(0,0,0,0)');
+          sg.addColorStop(0.62, 'rgba(0,0,0,0)');
+          sg.addColorStop(1, 'rgba(0,0,0,0.68)');
+          ctx.fillStyle = sg;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, r, 0, TAU);
+          ctx.fill();
+        }
+
+        function drawDebrisBelt(st, cam, scale, bright) {
+          var r = mulberry32((st.seed ^ 0x7f4a7c15) >>> 0);
+          var n = 90,
+            t = st.tGlobal;
+          var inner = 0.62,
+            outer = 0.86;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          for (var i = 0; i < n; i++) {
+            var phase = r() * TAU,
+              rad = (inner + r() * (outer - inner)) * st.min * 0.5 * cam.zoom * scale;
+            var period = 12 + r() * 16;
+            var ang = phase + TAU * (t / period);
+            var px = Math.cos(ang) * rad,
+              pz = Math.sin(ang) * rad * 0.32;
+            var c = Math.cos(cam.rot),
+              si = Math.sin(cam.rot);
+            var x = cam.cx + px * c - pz * si;
+            var y = cam.cy + (px * si + pz * c) * (0.55 + 0.45 * Math.cos(cam.inc));
+            var a = 0.25 * bright * (0.4 + 0.6 * r());
+            ctx.fillStyle = rgba(st.pal[i % st.pal.length], a);
+            ctx.fillRect(x, y, Math.max(0.7, 1.4 * st.s), Math.max(0.7, 1.4 * st.s));
+          }
+          ctx.restore();
+        }
+
+        function drawSpiral(st, cam, scale, bright) {
+          var r = mulberry32((st.seed ^ 0x1b56c4e9) >>> 0);
+          var arms = 2,
+            per = 220,
+            t = st.tGlobal;
+          var c = Math.cos(cam.rot),
+            si = Math.sin(cam.rot);
+          var maxR = st.min * 0.5 * cam.zoom * scale;
+          var squash = 0.55 + 0.45 * Math.cos(cam.inc);
+          function proj(ang, rad) {
+            var px = Math.cos(ang) * rad,
+              pz = Math.sin(ang) * rad * 0.34;
+            return { x: cam.cx + px * c - pz * si, y: cam.cy + (px * si + pz * c) * squash };
+          }
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          // diffuse disk haze
+          var dg = ctx.createRadialGradient(cam.cx, cam.cy, 0, cam.cx, cam.cy, maxR);
+          dg.addColorStop(0, rgba(st.pal[4 % st.pal.length], 0.12 * bright));
+          dg.addColorStop(0.55, rgba(st.pal[2 % st.pal.length], 0.06 * bright));
+          dg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = dg;
+          ctx.fillRect(cam.cx - maxR, cam.cy - maxR, maxR * 2, maxR * 2);
+          // soft spiral arms
+          for (var a = 0; a < arms; a++) {
+            for (var pass = 0; pass < 3; pass++) {
+              ctx.beginPath();
+              for (var i = 0; i <= per; i++) {
+                var f = Math.pow(i / per, 0.7);
+                var ang = a * Math.PI + f * 4.2 + t * (0.24 - f * 0.1) + (pass - 1) * 0.14;
+                var p = proj(ang, (0.05 + f * 0.98) * maxR);
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+              }
+              ctx.strokeStyle = rgba(st.pal[(a + pass) % st.pal.length], (0.05 + pass * 0.02) * bright);
+              ctx.lineWidth = Math.max(1, (3 + pass * 3) * st.s);
+              ctx.stroke();
+            }
+          }
+          // central bulge
+          var coreR = maxR * 0.4;
+          var cg = ctx.createRadialGradient(cam.cx, cam.cy, 0, cam.cx, cam.cy, coreR);
+          cg.addColorStop(0, rgba(lighten(st.pal[0], 0.7), 0.7 * bright));
+          cg.addColorStop(0.4, rgba(st.pal[0], 0.26 * bright));
+          cg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = cg;
+          ctx.fillRect(cam.cx - coreR, cam.cy - coreR, coreR * 2, coreR * 2);
+          // stars in the disk
+          for (var a2 = 0; a2 < arms; a2++) {
+            for (var j = 0; j < per; j++) {
+              var fj = Math.pow(j / per, 0.72);
+              var angj = a2 * Math.PI + fj * 4.2 + t * (0.24 - fj * 0.1) + (r() - 0.5) * 0.3;
+              var pj = proj(angj, (0.05 + fj * 0.98) * maxR * (0.92 + r() * 0.16));
+              var alpha = clamp((0.32 * (1 - fj * 0.4) + 0.5 * r()) * bright, 0, 1);
+              ctx.fillStyle = rgba(lighten(st.pal[(a2 + Math.floor(fj * 5)) % st.pal.length], 0.3), alpha);
+              var sz = Math.max(0.7, (0.8 + 1.5 * r()) * st.s);
+              ctx.beginPath();
+              ctx.arc(pj.x, pj.y, sz, 0, TAU);
+              ctx.fill();
+            }
+          }
+          ctx.restore();
+        }
+
+        function drawBinary(st, cam, scale, bright) {
+          var t = st.tGlobal,
+            s = st.s * cam.zoom * scale;
+          var sep = 26 * s + 8 * s * Math.sin(t * 0.6);
+          var ang = t * 0.5;
+          var c = Math.cos(cam.rot),
+            si = Math.sin(cam.rot);
+          var offx = Math.cos(ang) * sep,
+            offz = Math.sin(ang) * sep * 0.4;
+          var x1 = cam.cx + (offx * c - offz * si);
+          var y1 = cam.cy + (offx * si + offz * c) * (0.55 + 0.45 * Math.cos(cam.inc));
+          var x2 = cam.cx - (offx * c - offz * si);
+          var y2 = cam.cy - (offx * si + offz * c) * (0.55 + 0.45 * Math.cos(cam.inc));
+          drawSunAt(st, cam, x1, y1, 22 * s, st.pal[0], bright);
+          drawSunAt(st, cam, x2, y2, 16 * s, st.pal[2 % st.pal.length], bright);
+        }
+        function drawSunAt(st, cam, x, y, R, color, bright) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var glowR = R * 5;
+          var gg = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+          gg.addColorStop(0, rgba(color, 0.4 * bright));
+          gg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(x - glowR, y - glowR, glowR * 2, glowR * 2);
+          var cg = ctx.createRadialGradient(x, y, 0, x, y, R);
+          cg.addColorStop(0, rgba(lighten(color, 0.85), bright));
+          cg.addColorStop(0.7, rgba(color, bright));
+          cg.addColorStop(1, rgba(darken(color, 0.4), bright));
+          ctx.fillStyle = cg;
+          ctx.beginPath();
+          ctx.arc(x, y, R, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        function drawEclipse(st, cam, scale, bright) {
+          var t = st.tGlobal;
+          drawSun(st, cam, scale, bright);
+          // A large foreground world crosses the star; period chosen so a transit is
+          // visible within a typical segment, on a near-horizontal path.
+          var s = st.s * cam.zoom * scale;
+          var period = 11;
+          var ang = (t / period) * TAU + st.seed * 0.13;
+          var x = cam.cx + Math.cos(ang) * st.width * 0.34;
+          var y = cam.cy + Math.sin(ang) * st.height * 0.1;
+          var r = 40 * s;
+          var cg = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.1, x, y, r);
+          cg.addColorStop(0, rgba(lighten(st.pal[3 % st.pal.length], 0.4), bright));
+          cg.addColorStop(0.75, rgba(st.pal[3 % st.pal.length], bright));
+          cg.addColorStop(1, rgba(darken(st.pal[3 % st.pal.length], 0.7), bright));
+          ctx.fillStyle = cg;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, TAU);
+          ctx.fill();
+          // rim light on the side facing the star
+          var lx = cam.cx - x,
+            ly = cam.cy - y,
+            ll = Math.hypot(lx, ly) || 1;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = rgba(st.pal[0], 0.5 * bright);
+          ctx.lineWidth = Math.max(0.8, 2.2 * s);
+          ctx.beginPath();
+          ctx.arc(x, y, r * 0.98, Math.atan2(ly, lx) - 1.5, Math.atan2(ly, lx) + 1.5);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        function drawLockup(st, cam, scale, bright) {
+          var t = st.tGlobal,
+            s = st.s * cam.zoom * scale;
+          var cx = st.width / 2,
+            cy = st.height / 2;
+          var settle = easeOutCubic(clamp(st.tLocal / 1.1, 0, 1));
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          // concentric orbital rings form a geometric mark in place of a wordmark
+          for (var i = 0; i < 3; i++) {
+            var rr = (36 + i * 26) * s * (0.9 + 0.1 * settle);
+            var rot = t * (0.1 + i * 0.05) * (i % 2 ? -1 : 1);
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(rot);
+            ctx.strokeStyle = rgba(st.pal[i % st.pal.length], (0.32 - i * 0.06) * bright * settle);
+            ctx.lineWidth = Math.max(0.6, (2.2 - i * 0.5) * s);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, rr, rr * (0.42 + i * 0.12), 0, 0, TAU);
+            ctx.stroke();
+            // orbiting node on each ring
+            var na = rot * 2 + i * 1.7;
+            var nx = Math.cos(na) * rr,
+              ny = Math.sin(na) * rr * (0.42 + i * 0.12);
+            ctx.fillStyle = rgba(lighten(st.pal[(i + 1) % st.pal.length], 0.3), 0.95 * bright * settle);
+            ctx.beginPath();
+            ctx.arc(nx, ny, Math.max(1.2, (3.4 - i * 0.5) * s), 0, TAU);
+            ctx.fill();
+            ctx.restore();
+          }
+          // core
+          var core = (12 + 4 * Math.sin(t * 1.2)) * s;
+          var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, core * 3.5);
+          cg.addColorStop(0, rgba(lighten(st.pal[0], 0.6), 0.95 * bright * settle));
+          cg.addColorStop(0.4, rgba(st.pal[0], 0.5 * bright * settle));
+          cg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = cg;
+          ctx.fillRect(cx - core * 3.5, cy - core * 3.5, core * 7, core * 7);
+          ctx.restore();
+        }
+
+        function drawGrain(st) {
+          if (!grainCanvas || grainKey !== st.seed) buildGrain(st.seed);
+          if (!grainCanvas) return;
+          var W = st.width,
+            H = st.height;
+          var ox = -((st.tGlobal * 37) % 128),
+            oy = -((st.tGlobal * 53) % 128);
+          ctx.save();
+          ctx.globalCompositeOperation = 'overlay';
+          ctx.globalAlpha = 0.35;
+          var pat = ctx.createPattern(grainCanvas, 'repeat');
+          if (pat) {
+            ctx.translate(ox, oy);
+            ctx.fillStyle = pat;
+            ctx.fillRect(-ox, -oy, W + 128, H + 128);
+          }
+          ctx.restore();
+        }
+        var grainCanvas = null,
+          grainKey = -1;
+        function buildGrain(seed) {
+          var size = 128;
+          var c = document.createElement('canvas');
+          c.width = c.height = size;
+          var gc = c.getContext('2d');
+          var img = gc.createImageData(size, size);
+          var rnd = mulberry32((seed ^ 0x51ed270b) >>> 0);
+          for (var i = 0; i < size * size; i++) {
+            var v = 200 + Math.floor(rnd() * 55);
+            img.data[i * 4] = v;
+            img.data[i * 4 + 1] = v;
+            img.data[i * 4 + 2] = v;
+            img.data[i * 4 + 3] = 14 + Math.floor(rnd() * 20);
+          }
+          gc.putImageData(img, 0, 0);
+          grainCanvas = c;
+          grainKey = seed;
+        }
+
+        function drawVignette(st) {
+          var W = st.width,
+            H = st.height;
+          var g = ctx.createRadialGradient(
+            W / 2,
+            H / 2,
+            Math.min(W, H) * 0.26,
+            W / 2,
+            H / 2,
+            Math.sqrt(W * W + H * H) / 2,
+          );
+          g.addColorStop(0, 'rgba(0,0,0,0)');
+          g.addColorStop(1, 'rgba(0,0,0,0.6)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        function drawCutEnvelope(st, enter, exit) {
+          // A brief horizontal light streak on the incoming and outgoing cut so the
+          // hard cut reads as intentional rhythm rather than a dropped frame.
+          var W = st.width,
+            H = st.height;
+          var inFlash = clamp(1 - enter, 0, 1);
+          var outFlash = clamp(1 - exit, 0, 1);
+          var flash = Math.max(inFlash, outFlash);
+          if (flash <= 0.001) return;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var g = ctx.createLinearGradient(0, 0, W, 0);
+          g.addColorStop(0, 'rgba(0,0,0,0)');
+          g.addColorStop(0.5, rgba(st.pal[4 % st.pal.length], 0.5 * flash));
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          var yy = H * 0.5;
+          ctx.fillRect(0, yy - 1.5 * st.s, W, 3 * st.s);
+          ctx.restore();
+        }
+
+        // ---------- frame composition ----------
+        function drawFrame(st) {
+          var cam = cameraFor(st);
+          var n = clamp(st.segFrames, 1, 100000);
+          var inFrames = Math.max(2, Math.min(12, Math.round(n * 0.18)));
+          var outFrames = Math.max(2, Math.min(12, Math.round(n * 0.18)));
+          var enter = easeOutCubic(clamp(st.frame / inFrames, 0, 1));
+          var exit = easeOutCubic(clamp((n - st.frame) / outFrames, 0, 1));
+          var scale = (1 + 0.16 * (1 - enter)) * (1 - 0.05 * (1 - exit));
+          var bright = (0.3 + 0.7 * enter) * (0.55 + 0.45 * exit) * st.intensity;
+          bright = clamp(bright, 0, 1.2);
+
+          drawBackground(st);
+          drawNebula(st);
+          drawStars(st);
+
+          if (st.layout === 'spiral') {
+            drawSpiral(st, cam, scale, bright);
+          } else if (st.layout === 'eclipsing') {
+            drawEclipse(st, cam, scale, bright);
+          } else if (st.layout === 'binary') {
+            drawBinary(st, cam, scale, bright);
+          } else if (st.layout === 'lockup') {
+            drawLockup(st, cam, scale, bright);
+          } else {
+            var info = bodiesFor(st);
+            var bodies = info.bodies;
+            // orbit rings
+            for (var k = 0; k < bodies.length; k++) drawOrbitPath(st, cam, bodies[k], scale, 0.14 * bright);
+            if (st.layout === 'solar' || st.layout === 'orbital') drawDebrisBelt(st, cam, scale, bright);
+            // far bodies + trails behind the star
+            var far = [],
+              near = [];
+            for (var b = 0; b < bodies.length; b++) {
+              var pos = bodyPos(st, cam, bodies[b], st.tGlobal, scale);
+              (pos.depth < 0 ? far : near).push({ b: bodies[b], pos: pos });
+            }
+            for (var f = 0; f < far.length; f++) {
+              drawTrail(st, cam, far[f].b, scale, st.tGlobal, clamp(far[f].b.period * 0.28, 0.8, 3.2));
+              drawBody(st, cam, far[f].b, far[f].pos, scale, bright * 0.55);
+            }
+            drawSun(st, cam, scale, bright);
+            for (var nb = 0; nb < near.length; nb++) {
+              drawTrail(st, cam, near[nb].b, scale, st.tGlobal, clamp(near[nb].b.period * 0.28, 0.8, 3.2));
+              drawBody(st, cam, near[nb].b, near[nb].pos, scale, bright);
+            }
+          }
+
+          drawCutEnvelope(st, enter, exit);
+          drawGrain(st);
+          drawVignette(st);
+        }
+
+        // ---------- external contract ----------
+        var controlled = false;
+        var previewRAF = 0;
+
+        async function ready() {
+          try {
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+          } catch (e) {
+            /* fonts are not used by the drawing code */
+          }
+        }
+
+        function render(opts) {
+          opts = opts || {};
+          controlled = true;
+          if (previewRAF) {
+            cancelAnimationFrame(previewRAF);
+            previewRAF = 0;
+          }
+          if (hint) hint.style.display = 'none';
+
+          var fps = opts.fps || 30;
+          var time = typeof opts.time === 'number' ? opts.time : (opts.frame || 0) / fps;
+          var frame = typeof opts.frame === 'number' ? opts.frame : Math.round(time * fps);
+          var width = Math.max(2, Math.round(opts.width || canvas.width));
+          var height = Math.max(2, Math.round(opts.height || canvas.height));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+          }
+          drawFrame(
+            makeState({
+              params: opts.params,
+              seed: opts.seed,
+              frame: frame,
+              time: time,
+              fps: fps,
+              width: width,
+              height: height,
+            }),
+          );
+        }
+
+        function dispose() {
+          controlled = true;
+          if (previewRAF) {
+            cancelAnimationFrame(previewRAF);
+            previewRAF = 0;
+          }
+        }
+
+        // ---------- standalone preview (never used by offline capture) ----------
+        var t0 = 0;
+        function previewLoop(now) {
+          if (controlled) return;
+          if (!t0) t0 = now;
+          var t = ((now - t0) / 1000) % 6;
+          var shot = PREVIEW_SHOTS[0];
+          for (var i = 0; i < PREVIEW_SHOTS.length; i++) {
+            if (t >= PREVIEW_SHOTS[i].from && t < PREVIEW_SHOTS[i].to) {
+              shot = PREVIEW_SHOTS[i];
+              break;
+            }
+          }
+          var local = t - shot.from;
+          drawFrame(
+            makeState({
+              params: shot.params,
+              seed: shot.seed,
+              frame: Math.round(local * 30),
+              time: local,
+              fps: 30,
+              width: canvas.width,
+              height: canvas.height,
+            }),
+          );
+          ctx.save();
+          ctx.font = '12px ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(170,190,230,0.75)';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText(t.toFixed(2) + 's · ' + shot.params.layout, 10, 8);
+          ctx.restore();
+          previewRAF = requestAnimationFrame(previewLoop);
+        }
+        var PREVIEW_SHOTS = [
+          {
+            from: 0,
+            to: 1.5,
+            seed: 11,
+            params: { layout: 'orbital', variant: 0, segmentFrames: 45, palette: ORBITAL },
+          },
+          { from: 1.5, to: 3, seed: 23, params: { layout: 'solar', variant: 1, segmentFrames: 45, palette: ORBITAL } },
+          {
+            from: 3,
+            to: 4.5,
+            seed: 37,
+            params: { layout: 'eclipsing', variant: 0, segmentFrames: 45, palette: ORBITAL },
+          },
+          { from: 4.5, to: 6, seed: 51, params: { layout: 'lockup', variant: 2, segmentFrames: 45, palette: ORBITAL } },
+        ];
+
+        window.viscraft = { ready: ready, render: render, dispose: dispose };
+        if (typeof requestAnimationFrame === 'function') previewRAF = requestAnimationFrame(previewLoop);
+      })();
+    </script>
+  </body>
+</html>

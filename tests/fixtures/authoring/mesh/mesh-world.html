@@ -1,0 +1,174 @@
+<!doctype html>
+<!--
+ * tests/fixtures/authoring/mesh/mesh-world.html
+ *
+ * The browser half of the "one shared World renders in BOTH backends" proof.
+ *
+ * This page loads a REAL `model` Asset (GLB/glTF) with THREE's `GLTFLoader` and
+ * draws its actual MESH with a real `THREE.WebGLRenderer`. The loaded object's
+ * placement AND the camera come from the per-frame `window.__viscraftWorld`
+ * snapshot that the shared World sampler installs immediately before each
+ * `render` call — so the entity's sampled transform and the sampled camera are
+ * the ONLY spatial inputs (no wall clock, no randomness).
+ *
+ * r186 addons import the BARE specifier `three`; the inline import map below
+ * resolves it to the pinned, sha256-verified `./vendor/three.module.js`. The
+ * GLTFLoader's relative `../utils/*.js` imports resolve to the vendored addon
+ * closure beside it. The page therefore needs only files already inside the
+ * capture snapshot: no network, no CDN, no second engine copy.
+ -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #101319;
+        overflow: hidden;
+      }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js" } }
+    </script>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from './vendor/addons/loaders/GLTFLoader.js';
+
+      const canvas = document.getElementById('view');
+
+      // Created lazily on first render (we only then know the viewport size); reused
+      // for every frame so only ONE WebGL context is ever created.
+      let renderer = null;
+      let scene = null;
+      let camera = null;
+      let placedRoot = null;
+
+      // The loaded GLB, cached across frames. `render` is awaited by the capture
+      // runner, so awaiting the first load here blocks frame 0 until the mesh exists.
+      let loadedGltf = null;
+      let loadingPromise = null;
+
+      // Public report for host-side introspection: proves the rendered object is the
+      // GLB (real GLTFLoader-derived geometry), not a placeholder.
+      const report = {
+        assetId: null,
+        sourceUrl: null,
+        vertexCount: 0,
+        triangleCount: 0,
+        bboxMin: null,
+        bboxMax: null,
+        meshCount: 0,
+        frames: [],
+      };
+      window.__meshReport = report;
+
+      function loadModel(url) {
+        if (!loadingPromise) {
+          // Render owns the complete binding bytes before the loader parses them.
+          loadingPromise = (async () => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`mesh-world: model request failed (${response.status})`);
+            const bytes = await response.arrayBuffer();
+            return new GLTFLoader().parseAsync(bytes, '');
+          })().then(gltf => {
+            const counts = { vertices: 0, triangles: 0, meshes: 0 };
+            const box = new THREE.Box3();
+            gltf.scene.traverse(child => {
+              if (!child.isMesh || !child.geometry) return;
+              counts.meshes += 1;
+              const geometry = child.geometry;
+              if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
+              const position = geometry.getAttribute('position');
+              if (position) counts.vertices += position.count;
+              counts.triangles += geometry.index ? geometry.index.count / 3 : position ? position.count / 3 : 0;
+              // Measure the geometry's own bounding box in the loaded object's local
+              // space, before any World transform, so the number describes the Asset.
+              geometry.computeBoundingBox();
+              if (geometry.boundingBox) box.union(geometry.boundingBox);
+              if (!child.material)
+                child.material = new THREE.MeshStandardMaterial({ color: 0x33cc66, metalness: 0, roughness: 1 });
+              // Render both faces: the Asset's material must survive whatever winding
+              // it was authored with, so the silhouette is never missing a face.
+              child.material.side = THREE.DoubleSide;
+            });
+            report.vertexCount = counts.vertices;
+            report.triangleCount = counts.triangles;
+            report.meshCount = counts.meshes;
+            report.bboxMin = box.isEmpty() ? null : [box.min.x, box.min.y, box.min.z];
+            report.bboxMax = box.isEmpty() ? null : [box.max.x, box.max.y, box.max.z];
+            loadedGltf = gltf;
+            return gltf;
+          });
+        }
+        return loadingPromise;
+      }
+
+      window.viscraft = {
+        ready() {
+          /* nothing to preload: bindings are only known per render */
+        },
+        async render(args) {
+          const world = window.__viscraftWorld;
+          if (!world) throw new Error('mesh-world: window.__viscraftWorld was not installed before render');
+
+          const binding = args.bindings && args.bindings.model;
+          if (!binding || !binding.url) throw new Error('mesh-world: the "model" binding is required');
+
+          if (!renderer) {
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+            renderer.setPixelRatio(1);
+            renderer.setClearColor(0x101319, 1);
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x101319);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+            const key = new THREE.DirectionalLight(0xffffff, 2.2);
+            key.position.set(3, 6, 5);
+            scene.add(key);
+            camera = new THREE.PerspectiveCamera(50, args.width / args.height, 0.1, 200);
+          }
+
+          const gltf = await loadModel(binding.url);
+          report.assetId = binding.id;
+          report.sourceUrl = binding.url;
+
+          if (!placedRoot) {
+            placedRoot = gltf.scene;
+            scene.add(placedRoot);
+          }
+
+          // Place the loaded mesh at the World entity that references this Asset.
+          const entity = world.entities.find(e => e.asset === binding.id) || world.entities[0];
+          if (!entity) throw new Error('mesh-world: the shared World has no entity to place');
+          const t = entity.transform;
+          placedRoot.position.set(t.position[0], t.position[1], t.position[2]);
+          placedRoot.rotation.set(t.rotation[0], t.rotation[1], t.rotation[2]);
+          placedRoot.scale.set(t.scale[0], t.scale[1], t.scale[2]);
+          placedRoot.updateMatrixWorld(true);
+
+          // Camera straight from the sampled World camera (position/target/fov).
+          const c = world.camera;
+          camera.position.set(c.position[0], c.position[1], c.position[2]);
+          camera.lookAt(c.target[0], c.target[1], c.target[2]);
+          camera.fov = c.fov;
+          camera.aspect = args.width / args.height;
+          camera.updateProjectionMatrix();
+
+          renderer.setSize(args.width, args.height, false);
+          renderer.render(scene, camera);
+
+          report.frames.push({
+            frame: world.frame,
+            entity: entity.id,
+            position: t.position.slice(),
+            cameraId: c.id,
+            cameraPosition: c.position.slice(),
+          });
+        },
+      };
+    </script>
+  </body>
+</html>

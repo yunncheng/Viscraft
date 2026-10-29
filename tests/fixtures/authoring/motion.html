@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viscraft · kinetic typography</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #05060f;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        object-fit: contain;
+      }
+      .hint {
+        position: fixed;
+        left: 10px;
+        bottom: 8px;
+        font:
+          11px/1.4 ui-monospace,
+          monospace;
+        color: #64739a;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" width="960" height="540"></canvas>
+    <div class="hint" id="hint">
+      Viscraft kinetic typography · preview loop (offline capture is frame-deterministic)
+    </div>
+    <script>
+      /*
+       * Viscraft CodeScene: a CPU-only Canvas kinetic-typography renderer.
+       *
+       * Offline capture contract (see skills/viscraft/SKILL.md):
+       *   window.viscraft = {
+       *     ready?: async () => void,
+       *     render: ({ frame, time, fps, width, height, seed, params, bindings }) => void,
+       *     dispose?: () => void,
+       *   }
+       *
+       * Determinism: every value drawn for frame i is a pure function of
+       * (time = i / fps, seed, params). No Date.now(), no Math.random(), no
+       * requestAnimationFrame time is used while the page is externally driven.
+       * The on-load preview loop only exists so the file can be opened directly
+       * in a browser; the first external render() call stops it.
+       */
+      (function () {
+        'use strict';
+
+        var canvas = document.getElementById('stage');
+        var ctx = canvas.getContext('2d', { alpha: false });
+        var hint = document.getElementById('hint');
+
+        var NEON = ['#00e5ff', '#ff2fb9', '#7c4dff', '#00ffa3'];
+        var SOLAR = ['#ffd166', '#ff6b6b', '#4dabf7', '#f8f9fa'];
+
+        var DEFAULT_PARAMS = {
+          layout: 'assemble',
+          text: 'CRAFT',
+          subtext: '',
+          palette: NEON,
+          beatFrames: 15,
+          hue: 0,
+          intensity: 1,
+          stagger: 0.11,
+          bars: 36,
+          duration: 6,
+        };
+
+        // Mirrors the three shots created by tests/fixtures/authoring/create-motion.mjs so the file
+        // can be previewed standalone. Keep in sync when tuning the example.
+        var PREVIEW_SHOTS = [
+          {
+            from: 0,
+            to: 2,
+            seed: 11,
+            params: {
+              layout: 'assemble',
+              text: 'CRAFT',
+              subtext: '',
+              palette: NEON,
+              beatFrames: 15,
+              hue: 0,
+              intensity: 1,
+              stagger: 0.11,
+            },
+          },
+          {
+            from: 2,
+            to: 4,
+            seed: 29,
+            params: {
+              layout: 'rhythm',
+              text: 'RHYTHM',
+              subtext: 'in motion',
+              palette: NEON,
+              beatFrames: 15,
+              hue: 0.05,
+              intensity: 1,
+              bars: 36,
+            },
+          },
+          {
+            from: 4,
+            to: 6,
+            seed: 47,
+            params: {
+              layout: 'lockup',
+              text: 'CRAFT',
+              subtext: 'a viscraft study',
+              palette: SOLAR,
+              beatFrames: 15,
+              hue: 0.1,
+              intensity: 0.9,
+            },
+          },
+        ];
+
+        // ---------- deterministic math ----------
+        var TAU = Math.PI * 2;
+        function clamp(v, a, b) {
+          return v < a ? a : v > b ? b : v;
+        }
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+        function easeOutCubic(t) {
+          t = clamp(t, 0, 1);
+          return 1 - Math.pow(1 - t, 3);
+        }
+        function easeOutBack(t) {
+          var c1 = 1.70158,
+            c3 = c1 + 1;
+          t = clamp(t, 0, 1);
+          return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        }
+
+        function mulberry32(seed) {
+          var a = seed >>> 0;
+          return function () {
+            a = (a + 0x6d2b79f5) >>> 0;
+            var t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        function hexToRgb(hex) {
+          var h = String(hex).replace('#', '');
+          if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+          var n = parseInt(h, 16);
+          if (!isFinite(n)) n = 0;
+          return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        }
+        function rgba(c, a) {
+          return 'rgba(' + (c.r | 0) + ',' + (c.g | 0) + ',' + (c.b | 0) + ',' + a + ')';
+        }
+        function mix(a, b, t) {
+          return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
+        }
+        function lighten(c, t) {
+          return mix(c, { r: 255, g: 255, b: 255 }, t);
+        }
+        function darken(c, t) {
+          return mix(c, { r: 0, g: 0, b: 0 }, t);
+        }
+
+        function fontFor(size, weight) {
+          return (weight || 800) + ' ' + size + 'px "Arial Black", Impact, "Helvetica Neue", Arial, sans-serif';
+        }
+        function glyphMetrics(text, size, weight, tracking) {
+          ctx.font = fontFor(size, weight);
+          var chars = Array.from(text);
+          var widths = chars.map(function (ch) {
+            return ctx.measureText(ch).width;
+          });
+          var total =
+            widths.reduce(function (a, b) {
+              return a + b;
+            }, 0) +
+            tracking * Math.max(0, chars.length - 1);
+          return { chars: chars, widths: widths, total: total };
+        }
+        function drawSpaced(text, cx, y, tracking) {
+          var chars = Array.from(text);
+          var widths = chars.map(function (c) {
+            return ctx.measureText(c).width;
+          });
+          var total =
+            widths.reduce(function (a, b) {
+              return a + b;
+            }, 0) +
+            tracking * Math.max(0, chars.length - 1);
+          var x = cx - total / 2;
+          var prev = ctx.textAlign;
+          ctx.textAlign = 'left';
+          for (var i = 0; i < chars.length; i++) {
+            ctx.fillText(chars[i], x, y);
+            x += widths[i] + tracking;
+          }
+          ctx.textAlign = prev;
+        }
+
+        function makeState(o) {
+          var p = Object.assign({}, DEFAULT_PARAMS, o.params || {});
+          var rawPal = Array.isArray(p.palette) && p.palette.length ? p.palette : DEFAULT_PARAMS.palette;
+          return {
+            p: p,
+            pal: rawPal.map(hexToRgb),
+            seed: o.seed | 0,
+            frame: o.frame | 0,
+            time: o.time || 0,
+            fps: o.fps || 30,
+            width: o.width,
+            height: o.height,
+            s: o.height / 360,
+            beatFrames: p.beatFrames || 15,
+          };
+        }
+
+        // ---------- layered drawing ----------
+        function drawBackground(st, hue) {
+          var W = st.width,
+            H = st.height,
+            pal = st.pal,
+            time = st.time;
+          var base = { r: 5, g: 6, b: 16 };
+          var k = 0.16 + 0.07 * Math.sin(time * 1.6 + hue * 6);
+          var top = mix(base, pal[0], clamp(k, 0, 0.5));
+          var bottom = mix(base, pal[1 % pal.length], clamp(k * 0.7, 0, 0.4));
+          var g = ctx.createLinearGradient(0, 0, W, H);
+          g.addColorStop(0, rgba(darken(top, 0.1), 1));
+          g.addColorStop(0.55, rgba(base, 1));
+          g.addColorStop(1, rgba(darken(bottom, 0.05), 1));
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+
+          var cx = W / 2,
+            cy = H / 2;
+          var rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.6);
+          rg.addColorStop(0, rgba(pal[2 % pal.length], 0.16));
+          rg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        function drawRings(st, beatPhase, beatIndex) {
+          var W = st.width,
+            H = st.height,
+            pal = st.pal,
+            s = st.s,
+            time = st.time;
+          var cx = W / 2,
+            cy = H / 2,
+            maxR = Math.sqrt(W * W + H * H) * 0.55;
+          ctx.save();
+          ctx.lineWidth = 1.4 * s;
+          for (var r = 0; r < 3; r++) {
+            var ph = (beatPhase + r / 3) % 1;
+            var rad = easeOutCubic(ph) * maxR;
+            var a = (1 - ph) * 0.22 * (r === 0 ? 1 : 0.6);
+            ctx.strokeStyle = rgba(pal[(r + beatIndex) % pal.length], a);
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, TAU);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 0.1;
+          ctx.strokeStyle = rgba(pal[3 % pal.length], 0.5);
+          var spokes = 24;
+          for (var i = 0; i < spokes; i++) {
+            var ang = (i / spokes) * TAU + time * 0.05;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * maxR * 0.25, cy + Math.sin(ang) * maxR * 0.25);
+            ctx.lineTo(cx + Math.cos(ang) * maxR, cy + Math.sin(ang) * maxR);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        var grainCache = { seed: null, canvas: null, size: 128 };
+        function getGrain(seed) {
+          if (grainCache.seed === seed) return grainCache;
+          var size = 128;
+          var c = document.createElement('canvas');
+          c.width = c.height = size;
+          var gc = c.getContext('2d');
+          var img = gc.createImageData(size, size);
+          var rnd = mulberry32((seed ^ 0x51ed270b) >>> 0);
+          for (var i = 0; i < size * size; i++) {
+            var v = 200 + Math.floor(rnd() * 55);
+            img.data[i * 4] = v;
+            img.data[i * 4 + 1] = v;
+            img.data[i * 4 + 2] = v;
+            img.data[i * 4 + 3] = 18 + Math.floor(rnd() * 22);
+          }
+          gc.putImageData(img, 0, 0);
+          grainCache = { seed: seed, canvas: c, size: size };
+          return grainCache;
+        }
+        function drawGrain(st) {
+          var g = getGrain(st.seed);
+          if (!g.canvas) return;
+          var W = st.width,
+            H = st.height;
+          var ox = -((st.time * 37) % g.size);
+          var oy = -((st.time * 53) % g.size);
+          ctx.save();
+          ctx.globalCompositeOperation = 'overlay';
+          ctx.globalAlpha = 0.5;
+          var pat = ctx.createPattern(g.canvas, 'repeat');
+          if (pat) {
+            ctx.translate(ox, oy);
+            ctx.fillStyle = pat;
+            ctx.fillRect(-ox, -oy, W + g.size, H + g.size);
+          }
+          ctx.restore();
+        }
+
+        function drawScanlines(st) {
+          var W = st.width,
+            H = st.height,
+            s = st.s;
+          var step = 3 * s;
+          var off = (st.time * 20) % step;
+          ctx.save();
+          ctx.globalAlpha = 0.05;
+          ctx.fillStyle = '#000';
+          for (var y = -step + off; y < H; y += step) ctx.fillRect(0, y, W, 1 * s);
+          ctx.restore();
+        }
+
+        function drawVignette(st) {
+          var W = st.width,
+            H = st.height;
+          var g = ctx.createRadialGradient(
+            W / 2,
+            H / 2,
+            Math.min(W, H) * 0.25,
+            W / 2,
+            H / 2,
+            Math.sqrt(W * W + H * H) / 2,
+          );
+          g.addColorStop(0, 'rgba(0,0,0,0)');
+          g.addColorStop(1, 'rgba(0,0,0,0.55)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        function drawUnderline(st, cx, y, width, pal, pulse) {
+          ctx.save();
+          ctx.shadowColor = rgba(pal[0], 0.9);
+          ctx.shadowBlur = 16 * st.s * pulse;
+          var grad = ctx.createLinearGradient(cx - width / 2, 0, cx + width / 2, 0);
+          grad.addColorStop(0, rgba(pal[1 % pal.length], 0.25));
+          grad.addColorStop(0.5, rgba(lighten(pal[0], 0.3), 0.95));
+          grad.addColorStop(1, rgba(pal[1 % pal.length], 0.25));
+          ctx.fillStyle = grad;
+          ctx.fillRect(cx - width / 2, y, width, 3.4 * st.s);
+          ctx.restore();
+        }
+
+        function drawBrackets(st, b, pal) {
+          if (b <= 0) return;
+          var W = st.width,
+            H = st.height,
+            s = st.s;
+          var m = 26 * s,
+            len = 40 * s * easeOutCubic(b);
+          var corners = [
+            [m, m, 1, 1],
+            [W - m, m, -1, 1],
+            [m, H - m, 1, -1],
+            [W - m, H - m, -1, -1],
+          ];
+          ctx.save();
+          ctx.strokeStyle = rgba(pal[0], 0.5);
+          ctx.lineWidth = 2 * s;
+          for (var i = 0; i < corners.length; i++) {
+            var x = corners[i][0],
+              y = corners[i][1],
+              dx = corners[i][2],
+              dy = corners[i][3];
+            ctx.beginPath();
+            ctx.moveTo(x + dx * len, y);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x, y + dy * len);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        function drawAssemble(st, beatPhase, beatPulse) {
+          var W = st.width,
+            H = st.height,
+            s = st.s,
+            p = st.p,
+            pal = st.pal;
+          var size = 118 * s * (p.intensity || 1);
+          var tracking = 10 * s;
+          var text = String(p.text || '');
+          var m = glyphMetrics(text, size, 800, tracking);
+          var cx = W / 2,
+            baseY = H * 0.55;
+          var stagger = p.stagger || 0.11;
+          var local = st.time;
+          var x = cx - m.total / 2;
+          for (var i = 0; i < m.chars.length; i++) {
+            var w = m.widths[i];
+            var appear = clamp((local - i * stagger) / 0.45, 0, 1);
+            if (appear > 0) {
+              var e = easeOutBack(appear);
+              var drop = (1 - e) * 70 * s;
+              var rot = (1 - e) * 0.5 * (i % 2 ? 1 : -1);
+              var pop = 1 + 0.1 * beatPulse * appear;
+              var col = pal[i % pal.length];
+              ctx.save();
+              ctx.translate(x + w / 2, baseY + drop + Math.sin(local * 4 + i * 0.8) * 2.5 * s);
+              ctx.rotate(rot);
+              ctx.scale(pop, pop);
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.font = fontFor(size, 800);
+              ctx.shadowColor = rgba(col, 0.85);
+              ctx.shadowBlur = 30 * s * beatPulse + 12 * s;
+              ctx.fillStyle = rgba(lighten(col, 0.15), 0.97 * appear);
+              ctx.fillText(m.chars[i], 0, 0);
+              ctx.restore();
+            }
+            x += w + tracking;
+          }
+          var up = clamp((local - 0.35) / 0.9, 0, 1);
+          if (up > 0) drawUnderline(st, cx, baseY + size * 0.62, m.total * easeOutCubic(up), pal, beatPulse);
+        }
+
+        function drawRhythm(st, beatPhase, beatPulse, beatIndex) {
+          var W = st.width,
+            H = st.height,
+            s = st.s,
+            p = st.p,
+            pal = st.pal;
+          var cx = W / 2,
+            cy = H / 2;
+          var bars = p.bars || 36;
+          var rng = mulberry32((st.seed ^ 0x1234abcd) >>> 0);
+          var barW = W / bars;
+          ctx.save();
+          for (var i = 0; i < bars; i++) {
+            var base = 0.25 + 0.75 * rng();
+            var dist = Math.abs(i / (bars - 1) - 0.5) * 2;
+            var env = Math.pow(1 - dist, 0.8);
+            var wob = 0.5 + 0.5 * Math.sin(beatIndex * 0.9 + i * 0.5);
+            var h = (0.08 + 0.5 * base * env) * H * (0.55 + 0.45 * beatPulse) * (0.7 + 0.3 * wob);
+            ctx.fillStyle = rgba(pal[i % pal.length], 0.1 + 0.3 * beatPulse * env);
+            ctx.fillRect(i * barW + barW * 0.18, cy - h / 2, barW * 0.64, h);
+          }
+          ctx.restore();
+
+          var size = 76 * s * (p.intensity || 1);
+          var tracking = 6 * s;
+          var m = glyphMetrics(String(p.text || ''), size, 800, tracking);
+          var x = cx - m.total / 2;
+          for (var j = 0; j < m.chars.length; j++) {
+            var w = m.widths[j];
+            var bob = Math.sin(TAU * beatPhase + j * 0.7) * 8 * s;
+            var sc = 1 + 0.14 * beatPulse;
+            var col = pal[j % pal.length];
+            ctx.save();
+            ctx.translate(x + w / 2, cy + bob);
+            ctx.scale(sc, sc);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = fontFor(size, 800);
+            ctx.shadowColor = rgba(col, 0.8);
+            ctx.shadowBlur = 22 * s * beatPulse + 8 * s;
+            ctx.fillStyle = rgba(lighten(col, 0.2), 0.96);
+            ctx.fillText(m.chars[j], 0, 0);
+            ctx.restore();
+            x += w + tracking;
+          }
+          if (p.subtext) {
+            var a = clamp((st.time - 0.6) / 0.8, 0, 1);
+            ctx.save();
+            ctx.textBaseline = 'middle';
+            ctx.font = '600 ' + 20 * s + 'px "Helvetica Neue", Arial, sans-serif';
+            ctx.fillStyle = rgba(pal[3 % pal.length], 0.8 * a);
+            drawSpaced(String(p.subtext).toUpperCase(), cx, cy + size * 0.85, 4 * s);
+            ctx.restore();
+          }
+        }
+
+        function drawLockup(st, beatPhase, beatPulse) {
+          var W = st.width,
+            H = st.height,
+            s = st.s,
+            p = st.p,
+            pal = st.pal;
+          var cx = W / 2,
+            cy = H * 0.48;
+          var settle = easeOutCubic(clamp(st.time / 0.7, 0, 1));
+          var breathe = 1 + 0.012 * Math.sin(TAU * beatPhase);
+          var sc = (0.86 + 0.14 * settle) * breathe * (1 + 0.03 * beatPulse);
+          var size = 110 * s * (p.intensity || 1);
+          var tracking = 12 * s;
+          var m = glyphMetrics(String(p.text || ''), size, 800, tracking);
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.scale(sc, sc);
+          var x = -m.total / 2;
+          for (var i = 0; i < m.chars.length; i++) {
+            var w = m.widths[i];
+            var col = pal[i % pal.length];
+            ctx.save();
+            ctx.translate(x + w / 2, 0);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = fontFor(size, 800);
+            ctx.shadowColor = rgba(col, 0.85);
+            ctx.shadowBlur = 24 * s * beatPulse + 12 * s;
+            ctx.fillStyle = rgba(mix(col, { r: 255, g: 255, b: 255 }, 0.25), 0.97 * settle);
+            ctx.fillText(m.chars[i], 0, 0);
+            ctx.restore();
+            x += w + tracking;
+          }
+          ctx.restore();
+
+          var up = clamp((st.time - 0.55) / 0.9, 0, 1);
+          if (up > 0) drawUnderline(st, cx, cy + size * sc * 0.62, m.total * easeOutCubic(up) * sc, pal, beatPulse);
+
+          if (p.subtext) {
+            var a = clamp((st.time - 1.0) / 0.9, 0, 1);
+            ctx.save();
+            ctx.textBaseline = 'middle';
+            ctx.font = '600 ' + 19 * s + 'px "Helvetica Neue", Arial, sans-serif';
+            ctx.fillStyle = rgba(mix(pal[3 % pal.length], { r: 255, g: 255, b: 255 }, 0.15), 0.85 * a);
+            drawSpaced(String(p.subtext).toUpperCase(), cx, cy + size * 0.95, 5 * s);
+            ctx.restore();
+          }
+          drawBrackets(st, clamp((st.time - 0.15) / 0.8, 0, 1), pal);
+        }
+
+        function drawFrame(st) {
+          var beat = st.beatFrames / st.fps;
+          var beatPhase = (((st.time % beat) + beat) % beat) / beat;
+          var beatIndex = Math.floor(st.time / beat);
+          var beatPulse = Math.pow(1 - beatPhase, 3);
+          var hue = st.p.hue || 0;
+
+          drawBackground(st, hue);
+          drawRings(st, beatPhase, beatIndex);
+          drawGrain(st);
+
+          if (st.p.layout === 'rhythm') drawRhythm(st, beatPhase, beatPulse, beatIndex);
+          else if (st.p.layout === 'lockup') drawLockup(st, beatPhase, beatPulse);
+          else drawAssemble(st, beatPhase, beatPulse);
+
+          drawScanlines(st);
+          drawVignette(st);
+        }
+
+        // ---------- external contract ----------
+        var controlled = false;
+        var previewRAF = 0;
+
+        async function ready() {
+          try {
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+          } catch (e) {
+            /* fonts are optional for determinism within a verified env */
+          }
+        }
+
+        function render(opts) {
+          opts = opts || {};
+          controlled = true;
+          if (previewRAF) {
+            cancelAnimationFrame(previewRAF);
+            previewRAF = 0;
+          }
+          if (hint) hint.style.display = 'none';
+
+          var fps = opts.fps || 30;
+          var time = typeof opts.time === 'number' ? opts.time : (opts.frame || 0) / fps;
+          var frame = typeof opts.frame === 'number' ? opts.frame : Math.round(time * fps);
+          var width = Math.max(2, Math.round(opts.width || canvas.width));
+          var height = Math.max(2, Math.round(opts.height || canvas.height));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+          }
+          drawFrame(
+            makeState({
+              params: opts.params,
+              seed: opts.seed,
+              frame: frame,
+              time: time,
+              fps: fps,
+              width: width,
+              height: height,
+            }),
+          );
+        }
+
+        function dispose() {
+          controlled = true;
+          if (previewRAF) {
+            cancelAnimationFrame(previewRAF);
+            previewRAF = 0;
+          }
+        }
+
+        // ---------- standalone preview (not used by offline capture) ----------
+        var t0 = 0;
+        function previewLoop(now) {
+          if (controlled) return;
+          if (!t0) t0 = now;
+          var t = ((now - t0) / 1000) % 6;
+          var shot = PREVIEW_SHOTS[0];
+          for (var i = 0; i < PREVIEW_SHOTS.length; i++) {
+            if (t >= PREVIEW_SHOTS[i].from && t < PREVIEW_SHOTS[i].to) {
+              shot = PREVIEW_SHOTS[i];
+              break;
+            }
+          }
+          var local = t - shot.from;
+          drawFrame(
+            makeState({
+              params: shot.params,
+              seed: shot.seed,
+              frame: Math.round(local * 30),
+              time: local,
+              fps: 30,
+              width: canvas.width,
+              height: canvas.height,
+            }),
+          );
+          ctx.save();
+          ctx.font = '12px ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(170,190,230,0.75)';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText(t.toFixed(2) + 's', 10, 8);
+          ctx.restore();
+          previewRAF = requestAnimationFrame(previewLoop);
+        }
+
+        window.viscraft = { ready: ready, render: render, dispose: dispose };
+        if (typeof requestAnimationFrame === 'function') previewRAF = requestAnimationFrame(previewLoop);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Crayon page — material sound</title></head>
+<body><script type="module">
+import { renderFoley } from './foley.mjs';
+window.viscraftSound = {
+  render({ sampleRate, channels, samples, params, seed }) {
+    const result = renderFoley({ sampleRate, channels, frames: samples, params, seed });
+    window.viscraftSound.report = result.report;
+    return { channels: result.channels };
+  },
+};
+</script></body></html>

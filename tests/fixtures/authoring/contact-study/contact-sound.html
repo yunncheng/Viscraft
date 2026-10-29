@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>contact-study — the struck bar, as a sound scene</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0d1014;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      // Sound contract: window.viscraftSound.render(args) is called exactly once
+      // and must return exactly `channels` arrays of exactly `samples` samples.
+      // The score and the rendering live in ./contact-sound.mjs; this page only
+      // loads the recordings this study uses and wires the contract.
+      import { CONTACT_SAMPLE_FILES, renderContactSound } from './contact-sound.mjs';
+
+      const bytes = {};
+
+      async function load() {
+        for (const file of CONTACT_SAMPLE_FILES) {
+          if (bytes[file]) continue;
+          const response = await fetch('./' + file);
+          if (!response.ok) throw new Error(`contact-sound: could not load ${file} (HTTP ${response.status})`);
+          bytes[file] = new Uint8Array(await response.arrayBuffer());
+        }
+      }
+
+      let loading = null;
+      const ready = () => (loading ??= load());
+
+      window.viscraftSound = {
+        ready,
+        async render({ sampleRate, channels, samples, params, seed }) {
+          await ready();
+          const rendered = renderContactSound({ sampleRate, channels, samples, params, seed, bytes });
+          // Keep the last measured report inspectable (a fact, not an acceptance).
+          window.viscraftSound.report = rendered.report;
+          return { channels: rendered.channels };
+        },
+        dispose() {
+          for (const file of Object.keys(bytes)) delete bytes[file];
+          loading = null;
+        },
+      };
+    </script>
+  </body>
+</html>

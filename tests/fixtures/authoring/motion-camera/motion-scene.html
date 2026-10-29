@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Viscraft · motion-camera scene</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #060a10; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="640" height="360"></canvas>
+<script type="module">
+/*
+ * Viscraft CodeScene entry: "motion-camera".
+ *
+ * One continuous WORLD is drawn every frame through ./motion-camera.mjs, the
+ * reusable MOTION + CAMERA planner. The camera is a keyframe TRACK that the
+ * module samples as a pure function of the frame; an `aim` keeps a chosen world
+ * subject on the centre of the screen at whatever zoom the track is at. Screen
+ * reveals (the callouts) use the module's segmented timing + staggered (lagged)
+ * start, and the subject accent uses a spring + a sustained float.
+ *
+ * Determinism: every pixel is a pure function of (frame, seed, params). The
+ * module has no wall clock, no Math.random and no requestAnimationFrame; the
+ * static marks use the module's seeded hash. The page sets the canvas to the
+ * requested output size every call, so the same module frames any width/height.
+ *
+ * params (all optional; merged over DEFAULTS; keys are fractions f in [0,1] of
+ * the scope so a shorter/longer capture still plays the whole move):
+ *   layout      'survey' | 'assembly'   selects keys/aim/subject/palette
+ *   stage       { width, height }        reference world frame
+ *   fit         'cover' | 'contain'      how the stage fills a different output
+ *   keys        [{ f, x, y, z, r, ease }] camera keyframe track (fractional f)
+ *   aim         { world:{x,y}, screen:{x,y} }  hold a world point on a screen fraction
+ *   drift       { amp, seed }            handheld micro-drift (0 = off; aim exact)
+ *   bounds      { minX,minY,maxX,maxY }  clamp the resolved centre
+ *   holdIn/holdOut  integer frames       holds at each end of the reveal scope
+ *   revealEase  named curve              easing for the staggered reveal
+ *   ease        named curve              ease used when a key omits its own
+ *   startFrame  integer                  camera scope offset on the comp clock
+ *   frames      integer                  scope length (REQUIRED; set by the source)
+ *   fps         number                   clock rate for springs/drift
+ *   callouts    integer                  number of staggered reveal marks
+ */
+import { createCamera, ease, lagged, scopeProgress, springHz, float, hash01 } from './motion-camera.mjs';
+
+const PALETTE = {
+  bg: '#08111b', grid: '#15293d', gridMajor: '#27506f', ink: '#dbe7f5',
+  structure: '#4c6d92', structureDim: '#31465f', accent: '#57d6ff', warm: '#ffce6b',
+  contour: '#93b6db',
+};
+
+const DEFAULTS = {
+  layout: 'survey',
+  stage: { width: 1600, height: 900 },
+  fit: 'cover',
+  startFrame: 0,
+  fps: 24,
+  frames: 1,
+  holdIn: 0,
+  holdOut: 0,
+  ease: 'cubicInOut',
+  revealEase: 'backOut',
+  drift: { amp: 0, seed: 0 },
+  bounds: null,
+  callouts: 6,
+};
+
+// Layouts: each is one creative reading of the same world. Keys carry a
+// FRACTION f (0..1) of the scope, an aim/`subject` world point and a palette
+// accent, so `params` (not code) decides which reading plays.
+const LAYOUTS = {
+  survey: {
+    accent: '#57d6ff',
+    subject: { x: 1180, y: 470 },
+    aim: { world: { x: 1180, y: 470 }, screen: { x: 0.5, y: 0.5 } },
+    keys: [
+      { f: 0, x: 800, y: 450, z: 1, ease: 'sineInOut' },
+      { f: 0.62, x: 1000, y: 472, z: 1.9, ease: 'sineInOut' },
+      { f: 1, x: 1180, y: 470, z: 3.4, ease: 'smooth' },
+    ],
+    rail: { y: 590, x0: 240, x1: 1380 },
+    moduleCount: 5,
+  },
+  assembly: {
+    accent: '#ffb347',
+    subject: { x: 1060, y: 520 },
+    aim: { world: { x: 1060, y: 520 }, screen: { x: 0.5, y: 0.5 } },
+    keys: [
+      { f: 0, x: 420, y: 520, z: 1.1, ease: 'cubicInOut' },
+      { f: 0.45, x: 760, y: 520, z: 1.5, ease: 'sineInOut' },
+      { f: 1, x: 1060, y: 520, z: 2.8, ease: 'smooth' },
+    ],
+    rail: { y: 520, x0: 300, x1: 1240 },
+    moduleCount: 4,
+  },
+};
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+function merge(params) {
+  const layoutName = params.layout ?? DEFAULTS.layout;
+  const layout = LAYOUTS[layoutName] ?? LAYOUTS.survey;
+  const frames = Number.isInteger(params.frames) && params.frames >= 1 ? params.frames : DEFAULTS.frames;
+  const stage = params.stage ?? DEFAULTS.stage;
+  const easeDefault = params.ease ?? DEFAULTS.ease;
+  // Keys arrive as scope fractions so an 8-frame probe and a 96-frame cut play
+  // the SAME move; here they become strictly increasing integer local frames the
+  // module expects (a scope too short to hold them collapses to what fits).
+  const keys = [];
+  let prev = -1;
+  for (const k of params.keys ?? layout.keys) {
+    let frame = Math.round((k.f ?? 0) * (frames - 1));
+    if (frame <= prev) frame = prev + 1;
+    if (frame > frames - 1) frame = frames - 1;
+    if (frame <= prev) continue;
+    keys.push({ frame, x: k.x, y: k.y, z: k.z, r: k.r ?? 0, ease: k.ease ?? easeDefault });
+    prev = frame;
+  }
+  if (keys.length === 0) keys.push({ frame: 0, x: stage.width / 2, y: stage.height / 2, z: 1, r: 0, ease: easeDefault });
+  return {
+    ...DEFAULTS,
+    ...params,
+    layout: layoutName in LAYOUTS ? layoutName : DEFAULTS.layout,
+    stage,
+    frames,
+    _layout: layout,
+    _keys: keys,
+    _aim: params.aim ?? layout.aim,
+    _subject: params.subject ?? layout.subject,
+    _accent: params.accent ?? layout.accent,
+    _rail: params.rail ?? layout.rail,
+    _moduleCount: Number.isInteger(params.moduleCount) ? params.moduleCount : layout.moduleCount,
+  };
+}
+
+function buildCamera(p) {
+  return createCamera({
+    stage: p.stage,
+    fit: p.fit,
+    keys: p._keys,
+    aim: p._aim,
+    drift: p.drift ?? null,
+    bounds: p.bounds ?? null,
+    startFrame: p.startFrame,
+    frames: p.frames,
+    fps: p.fps,
+  });
+}
+
+function line(a, b) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+
+/** Far layer: a parallax grid, so a hard push still reads as depth. */
+function drawGrid(camera, cameraSample, size, p) {
+  const far = camera.parallax(cameraSample, 0.55);
+  const step = 90;
+  const world = camera.visibleWorldBounds(far, size);
+  const x0 = Math.floor(world.minX / step) * step;
+  const x1 = Math.ceil(world.maxX / step) * step;
+  const y0 = Math.floor(world.minY / step) * step;
+  const y1 = Math.ceil(world.maxY / step) * step;
+  ctx.lineWidth = 1;
+  for (let x = x0; x <= x1; x += step) {
+    ctx.strokeStyle = x % 450 === 0 ? PALETTE.gridMajor : PALETTE.grid;
+    line(camera.toScreen({ x, y: y0 }, far, size), camera.toScreen({ x, y: y1 }, far, size));
+  }
+  for (let y = y0; y <= y1; y += step) {
+    ctx.strokeStyle = y % 450 === 0 ? PALETTE.gridMajor : PALETTE.grid;
+    line(camera.toScreen({ x: x0, y }, far, size), camera.toScreen({ x: x1, y }, far, size));
+  }
+}
+
+/** Mid layer: a rail of modules drawn through the MAIN camera. */
+function drawRail(camera, sample, size, p) {
+  const rail = p._rail;
+  const a = camera.toScreen({ x: rail.x0, y: rail.y }, sample, size);
+  const b = camera.toScreen({ x: rail.x1, y: rail.y }, sample, size);
+  ctx.strokeStyle = PALETTE.structure;
+  ctx.lineWidth = Math.max(1.5, Math.min(5, sample.z * 4));
+  line(a, b);
+  const n = p._moduleCount;
+  for (let i = 0; i < n; i++) {
+    const wx = rail.x0 + ((i + 0.5) / n) * (rail.x1 - rail.x0);
+    const base = camera.toScreen({ x: wx, y: rail.y }, sample, size);
+    const top = camera.toScreen({ x: wx, y: rail.y - 110 }, sample, size);
+    ctx.strokeStyle = PALETTE.structureDim;
+    ctx.lineWidth = Math.max(1, Math.min(4, sample.z * 3));
+    line(base, top);
+    const w = Math.max(3, 26 * sample.z);
+    ctx.strokeStyle = PALETTE.structure;
+    ctx.lineWidth = Math.max(1, Math.min(3, sample.z * 2));
+    ctx.strokeRect(top.x - w / 2, top.y - w / 2, w, w);
+  }
+}
+
+/** Near layer: the aim subject — a mast, a spring pulse ring and a float tag. */
+function drawSubject(camera, sample, size, p, time) {
+  const s = camera.toScreen(p._subject, sample, size);
+  const footWorld = { x: p._subject.x, y: p._subject.y + 150 / Math.max(sample.z, 1e-6) };
+  const foot = camera.toScreen(footWorld, sample, size);
+  ctx.strokeStyle = PALETTE.contour;
+  ctx.lineWidth = Math.max(1.5, Math.min(6, sample.z * 4));
+  line(s, foot);
+  // Landed ring: a spring step (may overshoot) drives radius and alpha.
+  const ring = springHz(Math.min(time, 2.5), 1.6, 4.5);
+  const r = Math.max(2, (14 + ring * 26) * sample.z);
+  ctx.strokeStyle = p._accent;
+  ctx.globalAlpha = 0.35 + 0.5 * Math.abs(ring);
+  ctx.lineWidth = Math.max(1, Math.min(4, sample.z * 2.5));
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // Sustained float tag above the mast.
+  const bob = float(time, 6, 3.6, 0.4) * Math.min(2, sample.z);
+  ctx.fillStyle = p._accent;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y - bob, Math.max(2, 5 * Math.min(sample.z, 3)), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** Screen reveal: callouts arrive on a staggered, eased cadence. */
+function drawCallouts(camera, sample, size, p, progress, seed) {
+  const n = Math.max(0, Math.floor(p.callouts));
+  const rail = p._rail;
+  let revealed = 0;
+  for (let i = 0; i < n; i++) {
+    const pi = lagged(i, n, progress, 0.16);
+    if (pi <= 0) continue;
+    revealed++;
+    const e = ease(p.revealEase, pi);
+    const wx = rail.x0 + ((i + 0.5) / n) * (rail.x1 - rail.x0);
+    const anchor = { x: wx, y: rail.y - 110 };
+    const a = camera.toScreen(anchor, sample, size);
+    const dir = (i % 2 === 0 ? -1 : 1) * (28 + hash01(seed, i) * 42);
+    const target = camera.toScreen({ x: anchor.x, y: anchor.y - 70 }, sample, size);
+    ctx.globalAlpha = Math.min(1, e);
+    ctx.strokeStyle = i % 2 ? PALETTE.warm : PALETTE.accent;
+    ctx.lineWidth = Math.max(1, Math.min(3, sample.z * 2));
+    line(a, target);
+    // A bracket tick, offset by the eased reveal (no glyphs, so no font deps).
+    const tipX = target.x + dir * Math.min(1, e);
+    const tipY = target.y - (1 - e) * 10;
+    ctx.beginPath();
+    ctx.moveTo(tipX - 6, tipY);
+    ctx.lineTo(tipX + 6, tipY);
+    ctx.lineTo(tipX + 6, tipY + 6);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  return revealed;
+}
+
+/** Foreground: a seeded field of measuring studs, drawn through the camera. */
+function drawStuds(camera, sample, size, seed, count, stage) {
+  for (let i = 0; i < count; i++) {
+    const wx = 120 + hash01(seed, i * 2 + 1) * (stage.width - 240);
+    const wy = 140 + hash01(seed, i * 2 + 2) * (stage.height - 280);
+    const pnt = camera.toScreen({ x: wx, y: wy }, sample, size);
+    if (pnt.x < -20 || pnt.y < -20 || pnt.x > size.width + 20 || pnt.y > size.height + 20) continue;
+    const r = Math.max(0.8, 3.2 * Math.min(sample.z, 4));
+    ctx.strokeStyle = PALETTE.gridMajor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(pnt.x, pnt.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function render({ frame = 0, width = 640, height = 360, seed = 0, params = {} } = {}) {
+  canvas.width = width;
+  canvas.height = height;
+  const size = { width, height };
+  const p = merge(params);
+  const camera = buildCamera(p);
+  const sample = camera.at(frame, size);
+  const time = frame / p.fps;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = (p.palette && p.palette.bg) || PALETTE.bg;
+  ctx.fillRect(0, 0, width, height);
+
+  drawGrid(camera, sample, size, p);
+  drawStuds(camera, sample, size, seed, 22, p.stage);
+
+  // A parallax mid layer, then the main-camera layers on top.
+  const mid = camera.parallax(sample, 0.85);
+  drawRail(camera, mid, size, p);
+
+  const progress = scopeProgress(sample.frame, p.frames, {
+    holdIn: p.holdIn,
+    holdOut: p.holdOut,
+    ease: p.revealEase,
+  });
+  const revealed = drawCallouts(camera, sample, size, p, progress, seed);
+  drawSubject(camera, sample, size, p, time);
+
+  window.rigState = {
+    frame: sample.frame,
+    globalFrame: sample.globalFrame,
+    layout: p.layout,
+    viewport: size,
+    stage: { ...p.stage },
+    camera: {
+      x: sample.x, y: sample.y, z: sample.z, r: sample.r,
+      t: sample.t, aimed: sample.aimed, clamped: sample.clamped, drift: sample.drift,
+    },
+    progress,
+    revealed,
+    callouts: Math.max(0, Math.floor(p.callouts)),
+    subjectScreen: camera.toScreen(p._subject, sample, size),
+  };
+}
+
+window.viscraft = { render };
+render({ frame: 0 });
+</script>
+</body>
+</html>

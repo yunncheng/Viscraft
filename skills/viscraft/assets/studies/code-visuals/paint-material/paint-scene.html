@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Paint material — procedural paint/collage CodeScene entry</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#efe6d2}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="paint"></canvas>
+<script type="module">
+// Entry contract: window.viscraft.render(ctx) is called once per frame.
+// All Look/mechanism logic lives in ./paint-material.mjs so the module is
+// reusable; this page only forwards the capture context to the renderer, which
+// merges ctx.params over the module's DEFAULTS and sizes the canvas every frame.
+import { renderPaint } from './paint-material.mjs';
+window.viscraft = { render(ctx) { renderPaint(document.getElementById('paint'), ctx); } };
+</script>
+</body></html>

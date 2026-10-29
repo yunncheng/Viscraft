@@ -1,0 +1,63 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      VISCRAFT_CONFIG_HOME: ${{ github.workspace }}/.scratch/ci-no-user-config
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install media tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - name: Install media tools (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg-full
+          echo "$(brew --prefix ffmpeg-full)/bin" >> "$GITHUB_PATH"
+      - name: Install media tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install ffmpeg --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Prepare a dedicated headless browser
+        run: |
+          node --input-type=module <<'JS'
+          import { appendFile } from 'node:fs/promises';
+          import path from 'node:path';
+          import { Browser, install } from '@puppeteer/browsers';
+          import { PUPPETEER_REVISIONS } from 'puppeteer-core/internal/revisions.js';
+          const browser = await install({
+            browser: Browser.CHROMEHEADLESSSHELL,
+            buildId: PUPPETEER_REVISIONS['chrome-headless-shell'],
+            cacheDir: path.join(process.env.RUNNER_TEMP, 'viscraft-browser'),
+          });
+          await appendFile(process.env.GITHUB_ENV, `VISCRAFT_BROWSER=${browser.executablePath}\n`);
+          JS
+      - run: npm run build
+      - run: npm run lint
+      - name: Check media tools and browser capture
+        run: node dist/src/cli.js doctor --smoke-browser
+      - name: Unit tests
+        run: node scripts/run-tests.mjs unit
+      - name: End-to-end tests
+        run: node scripts/run-tests.mjs e2e

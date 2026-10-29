@@ -1,0 +1,14 @@
+{
+  "tool": "image_gen.imagegen",
+  "created": "2026-10-20",
+  "items": [
+    {
+      "asset": "comic-pelican",
+      "prompt": "Use case: illustration-story. Asset type: cinematic animated short film reference frame, widescreen landscape. A single lovable slightly clumsy juvenile white pelican riding a small vintage teal step-through bicycle left to right. Huge long peach-orange bill and soft throat pouch, expressive dark eyes, small fluffy crest, rounded white feather body, gray-tipped wings holding the curved handlebars, short orange webbed feet resting on pedals. Bare natural bird, no clothing. Bicycle has exactly two thin cream tires, silver spokes, teal curved frame, small brown leather saddle, no basket. Show complete rider and both wheels, medium wide low side view, movement to the right. A richly hand-painted colorful comic-book seaside town with coral houses, turquoise sky, butter-yellow road, bold imperfect black ink outlines, watercolor and gouache paper grain, subtle halftone shading, whimsical plants, lively cinematic composition. One clear rectangular cream paper comic panel border visible at image edges, hero centrally framed with room ahead to the right. Playful and warm, artful European graphic novel atmosphere, highly polished illustration. No text, speech bubbles, letters, watermark or logos. This is a SINGLE full scene, not a collage or character sheet. Save actual output for project use."
+    },
+    {
+      "asset": "coast-pelican",
+      "prompt": "Use case: photorealistic-natural. Asset type: widescreen cinematic reference frame for a magical short film. A single lovable juvenile white pelican rides a small vintage teal step-through bicycle from left to right along the wet sand of a real ocean beach at golden sunset. Pelican: huge long peach-orange bill and natural throat pouch, expressive dark eyes, small fluffy crest, rounded white feather body, subtle gray-tipped wings resting on curved handlebars, short orange webbed feet on pedals; natural bird with no clothes. Bicycle: exactly two thin cream tires and silver spokes, teal curved frame, small brown leather saddle, no basket. Show entire bicycle and bird in medium wide side view, pelican and bicycle fill middle 45 percent of frame, ground-level tracking-camera composition. Photographic real ocean and beach, small translucent wavelets gliding around the wheels, delicate believable airborne water droplets, mirrorlike warm wet sand, low sun at upper right, amber rim light through fine translucent feather barbs, sea breeze ruffles feathers. The creature is adorable but anatomically credible with natural feather detail, no cartoon outline. Understated magical realism, shot on 35mm cinema lens, delicate warm film grain, atmospheric distance, peach and lavender sky, realistic sunlight and sea. Very beautiful, emotionally warm, calm and liberating. Single scene, no panels, no text, no watermark or logos. Landscape format."
+    }
+  ]
+}

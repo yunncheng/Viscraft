@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viscraft · orbital navigator (playable)</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #03040a;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        font:
+          12px/1.4 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        color: #cdd8f5;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        object-fit: contain;
+      }
+
+      /* On-screen controls / status. Visible while a person is playing; hidden the
+     instant an external renderer takes control so captured frames contain no UI. */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+      .overlay.hidden {
+        display: none;
+      }
+      .brand {
+        position: fixed;
+        left: 14px;
+        top: 12px;
+        letter-spacing: 0.34em;
+        font-size: 12px;
+        color: #9fb2e0;
+        text-transform: uppercase;
+      }
+      .brand b {
+        color: #ffd166;
+        font-weight: 700;
+      }
+      .status {
+        position: fixed;
+        right: 14px;
+        top: 12px;
+        text-align: right;
+        color: #7cf0ff;
+        letter-spacing: 0.12em;
+      }
+      .status .score {
+        font-size: 18px;
+        color: #fff;
+      }
+      .help {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .help span {
+        background: rgba(20, 28, 54, 0.72);
+        border: 1px solid rgba(124, 240, 255, 0.28);
+        border-radius: 999px;
+        padding: 5px 12px;
+        color: #cdd8f5;
+      }
+      .help kbd {
+        color: #ffd166;
+        font: inherit;
+        font-weight: 700;
+      }
+      .a11y {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas
+      id="stage"
+      width="640"
+      height="360"
+      tabindex="0"
+      aria-label="Orbital navigator: steer a probe through rings and dodge asteroids"
+    ></canvas>
+
+    <div class="overlay" id="overlay">
+      <div class="brand">ORBITAL <b>NAVIGATOR</b></div>
+      <div class="status">SCORE <span class="score" id="score">0</span><br />SPEED <span id="speed">1.00</span>×</div>
+      <div class="help" id="help">
+        <span><kbd>◀ ▶</kbd> steer</span>
+        <span><kbd>▲</kbd> / <kbd>Space</kbd> boost</span>
+        <span><kbd>R</kbd> reset</span>
+      </div>
+      <div class="a11y" id="a11y" aria-live="polite">score 0, speed 1.00 times</div>
+    </div>
+
+    <script>
+      /*
+       * Viscraft CodeScene: "ORBITAL NAVIGATOR" — a genuine, keyboard-playable CPU
+       * Canvas game that is *also* a deterministic offline renderer.
+       *
+       * This is an ORIGINAL code-authored subject. It loads, embeds and samples no
+       * external media, model, CDN, font or network resource. Everything on screen is
+       * drawn procedurally; audio for the shipped piece is synthesized later by the
+       * runtime from schema `tone` clips (this page never claims to record audio).
+       *
+       * ── Play (open the file directly) ────────────────────────────────────────────
+       *   ◀ / ▶        steer the probe left / right
+       *   ▲ / Space    boost (accelerates forward; raises the score rate)
+       *   R            reset to the fixed initial state
+       * A fixed-step accumulator advances the simulation at exactly 30 Hz regardless
+       * of display refresh, so live play and offline capture share one physics path.
+       *
+       * ── Offline capture contract (see src/backends/browser/capture.ts) ────────────────────────────
+       *   window.viscraft = {
+       *     ready?:   () => Promise<void>,
+       *     reset?:   () => void,
+       *     render:   ({ frame, time, fps, width, height, seed, params, bindings }) => void,
+       *     dispose?: () => void,
+       *     state:    () => ({ frame, x, y, velocity, score, events, camera }),
+       *   }
+       *
+       * The first external render() (or an explicit reset()) permanently stops the
+       * live loop. From then on the simulation is a pure function of
+       * (frame, seed, params, recorded input): every pixel for frame i is produced by
+       * replaying fixed 1/fps steps from the fixed initial state using the passed
+       * `fps` — no wall clock, no unseeded randomness, no RAF time.
+       *
+       * `reset()` prepares the known initial state and enters offline mode WITHOUT
+       * discarding input: the capture harness calls it after `ready()` and *before*
+       * injecting the frame-0 keypress, so the injected key must survive into frame 0.
+       * The simulation is therefore "primed" at frame -1, and each render(frame)
+       * advances exactly one step; a key held going into the first render is already
+       * reflected in the frame-0 state() (velocity begins accelerating and a `boost`
+       * event is emitted at frame 0). `reset()` uses the params/seed already set by a
+       * prior render when present, so re-priming never loses the current look.
+       *
+       * ── Recorded input (single channel) ──────────────────────────────────────────
+       * The runtime records real DOM keydown/keyup events through Puppeteer and tags
+       * each with the exact frame it affects by setting `window.__viscraftInputFrame`
+       * to that integer before dispatching the key. The page records
+       * `{ frame: window.__viscraftInputFrame, key, down }` and replays the schedule
+       * deterministically. When that global is absent:
+       *   - offline (controlled) events fall back to the current frame + 1;
+       *   - live play applies the key immediately to the pressed set.
+       * There is exactly one input channel — the recorded DOM schedule — so replay is
+       * stable and order-independent. KeyR (reset) is a genuine input that rewinds the
+       * run's motion/score.
+       *
+       * `params` (all optional):
+       *   title        string shown in the HUD
+       *   palette      array of CSS hex accent colours
+       *   baseSpeed    cruise speed in world units/second
+       *   boostSpeed   boosted speed
+       */
+      (function () {
+        'use strict';
+
+        var canvas = document.getElementById('stage');
+        var ctx = canvas.getContext('2d', { alpha: false });
+        var overlay = document.getElementById('overlay');
+        var scoreEl = document.getElementById('score');
+        var speedEl = document.getElementById('speed');
+        var a11yEl = document.getElementById('a11y');
+
+        var FPS = 30; // live preview step rate
+        var simFps = FPS; // active step rate; offline uses the passed fps
+        var DT = 1 / simFps;
+
+        var ORBITAL = ['#ffd166', '#ff8f5a', '#4dabf7', '#b28dff', '#7cf0ff'];
+        var DEFAULT_PARAMS = {
+          title: 'ORBITAL NAVIGATOR',
+          palette: ORBITAL,
+          baseSpeed: 6.5,
+          boostSpeed: 12.5,
+        };
+
+        // ── deterministic math ─────────────────────────────────────────────────────
+        var TAU = Math.PI * 2;
+        function clamp(v, a, b) {
+          return v < a ? a : v > b ? b : v;
+        }
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+        function hashString(s) {
+          var h = 2166136261 >>> 0;
+          for (var i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 16777619);
+          }
+          return h >>> 0;
+        }
+        function mulberry32(seed) {
+          var a = seed >>> 0;
+          return function () {
+            a = (a + 0x6d2b79f5) >>> 0;
+            var t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        function hexToRgb(hex) {
+          var h = String(hex).replace('#', '');
+          if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+          var n = parseInt(h, 16);
+          if (!isFinite(n)) n = 0;
+          return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        }
+        function rgba(c, a) {
+          return 'rgba(' + (c.r | 0) + ',' + (c.g | 0) + ',' + (c.b | 0) + ',' + a + ')';
+        }
+        function mix(a, b, t) {
+          return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
+        }
+        function lighten(c, t) {
+          return mix(c, { r: 255, g: 255, b: 255 }, t);
+        }
+        function darken(c, t) {
+          return mix(c, { r: 0, g: 0, b: 0 }, t);
+        }
+        function round(v, p) {
+          var m = Math.pow(10, p || 4);
+          return Math.round(v * m) / m;
+        }
+
+        // ── world constants ────────────────────────────────────────────────────────
+        var AHEAD = 16; // world units spawned ahead of the probe
+        var CULL = -1.6; // remove past this relative z
+        var SPACING = 3.2; // world units between entity slots
+        var Z0 = 2.4; // near-plane softening (keeps 1/z finite)
+        var PROBE_R = 0.09; // probe half-width in world units
+        var X_LIMIT = 1.25;
+        // Motion tuning is expressed at the live FPS; each step normalises with
+        // (DT * FPS) so offline capture at any fps advances the same real-time physics.
+        var STEER_ACCEL = 9.0; // world/s^2 (already time-based)
+        var STEER_DRAG = 0.9; // per live-step, normalised to per-second below
+        var SPEED_EASE = 0.14; // per live-step, normalised to per-second below
+
+        // ── input ──────────────────────────────────────────────────────────────────
+        // Single input channel: the runtime records real keydown/keyup events and
+        // tags each with the frame it affects (window.__viscraftInputFrame). The page
+        // replays that schedule deterministically; there is no second/baked channel.
+        var pressed = Object.create(null); // currently held keys (normalised)
+        var domEvents = []; // { frame, key, down } recorded from real DOM keys
+
+        function normalizeKey(e) {
+          var code = e && e.code;
+          if (
+            code === 'ArrowLeft' ||
+            code === 'ArrowRight' ||
+            code === 'ArrowUp' ||
+            code === 'ArrowDown' ||
+            code === 'Space' ||
+            code === 'KeyR'
+          )
+            return code;
+          var k = e && e.key;
+          if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown') return k;
+          if (k === ' ' || k === 'Spacebar' || k === 'Space') return 'Space';
+          if (k === 'r' || k === 'R') return 'KeyR';
+          return null;
+        }
+
+        // Apply every recorded event whose frame equals `f`. Reset (KeyR) is genuine:
+        // it rewinds the run's motion/score without touching the frame counter.
+        function applyEventsFor(f) {
+          for (var i = 0; i < domEvents.length; i++) {
+            var e = domEvents[i];
+            if (e.frame !== f) continue;
+            if (e.key === 'KeyR' && e.down) {
+              resetMotion();
+              continue;
+            }
+            pressed[e.key] = e.down;
+          }
+        }
+
+        // ── state ──────────────────────────────────────────────────────────────────
+        var state; // live simulation state
+        var seed = 7;
+        var params = Object.assign({}, DEFAULT_PARAMS);
+        var paramsKey = '';
+        var cam = { x: 0, y: 0 };
+        var stars = [];
+        var nebula = [];
+        var controlled = false;
+        var raf = 0;
+        var liveAcc = 0;
+        var liveLast = 0;
+        var grainCanvas = null,
+          grainKey = -1;
+
+        function paramKeyOf(p) {
+          return JSON.stringify({ t: p.title, pal: p.palette, b: p.baseSpeed, bs: p.boostSpeed });
+        }
+
+        function buildStars() {
+          var r = mulberry32((seed ^ 0x9e3779b9) >>> 0);
+          stars = [];
+          for (var i = 0; i < 260; i++) {
+            stars.push({
+              x: (r() * 2 - 1) * 1.6,
+              z: 0.4 + r() * (AHEAD + 3),
+              depth: 0.2 + r() * 0.8,
+              size: 0.4 + r() * 1.6,
+              phase: r() * TAU,
+              tw: 0.6 + r() * 2.4,
+            });
+          }
+        }
+        function buildNebula() {
+          var r = mulberry32((seed ^ 0x2545f491) >>> 0);
+          nebula = [];
+          for (var i = 0; i < 5; i++) {
+            nebula.push({
+              x: (r() * 2 - 1) * 1.9,
+              y: 0.15 + r() * 0.5,
+              rad: 0.35 + r() * 0.5,
+              spd: 0.15 + r() * 0.5,
+              phase: r() * TAU,
+            });
+          }
+        }
+        function buildGrain(s) {
+          var size = 128;
+          var c = document.createElement('canvas');
+          c.width = c.height = size;
+          var gc = c.getContext('2d');
+          var img = gc.createImageData(size, size);
+          var rnd = mulberry32((s ^ 0x51ed270b) >>> 0);
+          for (var i = 0; i < size * size; i++) {
+            var v = 200 + Math.floor(rnd() * 55);
+            img.data[i * 4] = v;
+            img.data[i * 4 + 1] = v;
+            img.data[i * 4 + 2] = v;
+            img.data[i * 4 + 3] = 12 + Math.floor(rnd() * 18);
+          }
+          gc.putImageData(img, 0, 0);
+          grainCanvas = c;
+          grainKey = s;
+        }
+
+        // An entity is a pure function of (seed, slot index): rings recur every third
+        // slot so the course stays playable; asteroids fill the gaps.
+        function makeEntity(i) {
+          var r = mulberry32((seed ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0);
+          var isRing = i % 3 === 0 || i % 11 === 7;
+          var e = {
+            i: i,
+            kind: isRing ? 'ring' : 'asteroid',
+            spawnDist: (i + 1) * SPACING,
+            worldX: 0,
+            radius: 0,
+            resolved: false,
+            hit: false,
+            spin: (r() - 0.5) * 1.2,
+            rot: r() * TAU,
+            hue: Math.floor(r() * params.palette.length),
+            verts: null,
+          };
+          if (isRing) {
+            e.radius = 0.52 + r() * 0.26;
+            e.worldX = (r() * 2 - 1) * 0.92;
+          } else {
+            e.radius = 0.15 + r() * 0.14;
+            e.worldX = (r() * 2 - 1) * 1.05;
+            var n = 7 + Math.floor(r() * 4);
+            e.verts = [];
+            for (var v = 0; v < n; v++) e.verts.push(0.72 + r() * 0.5);
+          }
+          return e;
+        }
+
+        function resetMotion() {
+          state.x = 0;
+          state.y = 0;
+          state.vx = 0;
+          state.speed = params.baseSpeed;
+          state.dist = 0;
+          state.score = 0;
+          state.combo = 0;
+          state.best = 0;
+          state.shake = 0;
+          state.flash = 0;
+          state.boostHeld = false;
+          state.boostGlow = 0;
+          state.entities = [];
+          state.nextIndex = 0;
+          state.events = [];
+          cam.x = 0;
+          cam.y = 0;
+        }
+
+        // Prepare the fixed initial state as a PRIMED frame: the next step produces
+        // frame 0. Starting at -1 lets a key injected before the first render land on
+        // frame 0 (so frame 0 already reflects it). The pressed set is always rebuilt
+        // from the recorded schedule, so a held key can never leak into earlier frames.
+        function primeSim() {
+          state = {
+            frame: -1,
+            x: 0,
+            y: 0,
+            vx: 0,
+            speed: params.baseSpeed,
+            dist: 0,
+            score: 0,
+            combo: 0,
+            best: 0,
+            shake: 0,
+            flash: 0,
+            boostHeld: false,
+            boostGlow: 0,
+            entities: [],
+            nextIndex: 0,
+            events: [],
+            seed: seed,
+          };
+          cam.x = 0;
+          cam.y = 0;
+          pressed = Object.create(null);
+          buildStars();
+          buildNebula();
+        }
+
+        function spawnEntities() {
+          while ((state.nextIndex + 1) * SPACING - state.dist < AHEAD) {
+            state.entities.push(makeEntity(state.nextIndex));
+            state.nextIndex++;
+          }
+        }
+
+        function relZ(e) {
+          return e.spawnDist - state.dist;
+        }
+
+        function resolveCrossings() {
+          for (var i = 0; i < state.entities.length; i++) {
+            var e = state.entities[i];
+            if (e.resolved) continue;
+            var z = relZ(e);
+            if (z > 0) continue;
+            e.resolved = true;
+            var dx = Math.abs(state.x - e.worldX);
+            if (e.kind === 'ring') {
+              if (dx <= e.radius * 0.72) {
+                e.hit = true;
+                state.combo = Math.min(9, state.combo + 1);
+                state.score += 100 + state.combo * 20;
+                state.events.push({ type: 'ring', frame: state.frame, x: round(e.worldX, 3), combo: state.combo });
+              } else {
+                state.combo = 0;
+              }
+            } else {
+              if (dx <= e.radius + PROBE_R) {
+                e.hit = true;
+                state.combo = 0;
+                state.score = Math.max(0, state.score - 60);
+                state.shake = 1;
+                state.flash = 1;
+                state.events.push({ type: 'collision', frame: state.frame, x: round(e.worldX, 3) });
+              }
+            }
+          }
+          if (state.combo > state.best) state.best = state.combo;
+        }
+
+        function stepOnce(f) {
+          state.frame = f;
+
+          var boosting = !!(pressed['Space'] || pressed['ArrowUp']);
+          if (boosting && !state.boostHeld) state.events.push({ type: 'boost', frame: f });
+          state.boostHeld = boosting;
+          state.boostGlow += ((boosting ? 1 : 0) - state.boostGlow) * 0.18;
+
+          var target = boosting ? params.boostSpeed : params.baseSpeed;
+          // Normalise the per-live-step easing to the active step rate so a capture at
+          // fps 10 or 60 models the same real-time acceleration as the 30 fps preview.
+          var tune = DT * FPS;
+          state.speed += (target - state.speed) * Math.min(1, SPEED_EASE * tune);
+
+          var turn = (pressed['ArrowRight'] ? 1 : 0) - (pressed['ArrowLeft'] ? 1 : 0);
+          state.vx += turn * STEER_ACCEL * DT;
+          state.vx *= Math.pow(STEER_DRAG, tune);
+          state.x = clamp(state.x + state.vx * DT, -X_LIMIT, X_LIMIT);
+
+          state.dist += state.speed * DT;
+          state.y = Math.sin(state.dist * 0.7) * 0.012;
+          state.shake *= 0.86;
+          state.flash *= 0.9;
+
+          spawnEntities();
+          resolveCrossings();
+
+          var keep = [];
+          for (var i = 0; i < state.entities.length; i++)
+            if (relZ(state.entities[i]) > CULL) keep.push(state.entities[i]);
+          state.entities = keep;
+
+          // parallax camera lags the probe and dips slightly on boost
+          cam.x = lerp(cam.x, state.x * 0.82, 0.12);
+          cam.y = lerp(cam.y, -state.boostGlow * 0.05, 0.1);
+
+          // scroll the starfield
+          for (var s = 0; s < stars.length; s++) {
+            stars[s].z -= state.speed * DT * 0.55;
+            if (stars[s].z < 0.3) {
+              stars[s].z += AHEAD + 3;
+            }
+          }
+        }
+
+        function simulateTo(target) {
+          if (target < state.frame) primeSim();
+          while (state.frame < target) {
+            var f = state.frame + 1;
+            applyEventsFor(f);
+            stepOnce(f);
+          }
+        }
+
+        // ── projection ─────────────────────────────────────────────────────────────
+        var view = { w: 640, h: 360, min: 360, focal: 223, horizon: 144, cx: 320 };
+        function updateView(w, h) {
+          view.w = w;
+          view.h = h;
+          view.min = Math.min(w, h);
+          view.focal = view.min * 0.62;
+          view.horizon = h * 0.4;
+          view.cx = w / 2;
+        }
+        // Relative z -> perspective scale. Larger = closer.
+        function kFor(z) {
+          return view.focal / Math.max(0.35, z + Z0);
+        }
+        function project(worldX, worldY, z) {
+          var k = kFor(z);
+          var drop = 1 - clamp(z / AHEAD, 0, 1);
+          return {
+            x: view.cx + (worldX - cam.x) * k,
+            y: view.horizon + drop * view.h * 0.56 + (worldY - cam.y) * k * 0.5,
+            k: k,
+          };
+        }
+
+        // ── drawing ────────────────────────────────────────────────────────────────
+        function pal() {
+          return params.palette;
+        }
+        function palRgb(i) {
+          return hexToRgb(pal()[i % pal().length]);
+        }
+
+        function drawBackground() {
+          var W = view.w,
+            H = view.h;
+          var top = { r: 5, g: 7, b: 16 },
+            mid = { r: 3, g: 4, b: 10 };
+          var g = ctx.createLinearGradient(0, 0, 0, H);
+          g.addColorStop(0, rgba(darken(mix(top, palRgb(4), 0.1), 0.1), 1));
+          g.addColorStop(0.55, rgba(mid, 1));
+          g.addColorStop(1, rgba(darken(mix(mid, palRgb(3), 0.08), 0.1), 1));
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        function drawNebula() {
+          var W = view.w,
+            H = view.h,
+            t = state.dist;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          for (var i = 0; i < nebula.length; i++) {
+            var b = nebula[i];
+            var drift = Math.sin(t * 0.03 * b.spd + b.phase);
+            var x = W * (0.5 + b.x * 0.5 * (1 - b.y));
+
+            var y = H * b.y + drift * 8;
+            var rad = b.rad * Math.min(W, H);
+            var g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+            var c = palRgb(i + 1);
+            g.addColorStop(0, rgba(c, 0.1));
+            g.addColorStop(0.5, rgba(c, 0.04));
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+          }
+          ctx.restore();
+        }
+
+        function drawStars() {
+          var W = view.w,
+            H = view.h,
+            t = state.frame / FPS;
+          ctx.save();
+          for (var i = 0; i < stars.length; i++) {
+            var s = stars[i];
+            var p = project(s.x, 0, s.z);
+            if (p.x < -6 || p.x > W + 6 || p.y < -6 || p.y > H + 6) continue;
+            var tw = 0.5 + 0.5 * Math.sin(t * s.tw + s.phase);
+            var a = (0.16 + 0.66 * s.depth) * (0.35 + 0.65 * tw);
+            var size = ((s.size * view.min) / 360) * (0.6 + 0.5 * s.depth) * clamp(p.k / 40, 0.5, 2.2);
+            ctx.fillStyle = 'rgba(226,236,255,' + a.toFixed(3) + ')';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(0.4, size), 0, TAU);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        function drawRing(e) {
+          var p = project(e.worldX, 0, relZ(e));
+          if (p.k <= 0) return;
+          var R = e.radius * p.k;
+          var c = palRgb(e.hue);
+          var near = clamp(1 - relZ(e) / AHEAD, 0, 1);
+          var pulse = 0.75 + 0.25 * Math.sin(state.frame * 0.2 + e.i);
+          var alpha = (e.resolved ? 0.35 : 0.85) * (0.4 + 0.6 * near) * pulse;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var gg = ctx.createRadialGradient(p.x, p.y, R * 0.55, p.x, p.y, R * 1.35);
+          gg.addColorStop(0, 'rgba(0,0,0,0)');
+          gg.addColorStop(0.75, rgba(c, alpha * 0.35));
+          gg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(p.x - R * 1.4, p.y - R * 1.4, R * 2.8, R * 2.8);
+          ctx.strokeStyle = rgba(lighten(c, 0.35), alpha);
+          ctx.lineWidth = Math.max(1, R * 0.14);
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, R, R * 0.86, e.rot * 0.3, 0, TAU);
+          ctx.stroke();
+          ctx.strokeStyle = rgba(c, alpha * 0.55);
+          ctx.lineWidth = Math.max(0.6, R * 0.06);
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, R * 0.82, R * 0.7, e.rot * 0.3, 0, TAU);
+          ctx.stroke();
+          // targeting ticks
+          for (var q = 0; q < 4; q++) {
+            var ang = e.rot * 0.3 + q * (Math.PI / 2);
+            ctx.strokeStyle = rgba(lighten(c, 0.5), alpha * 0.9);
+            ctx.lineWidth = Math.max(1, R * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(p.x + Math.cos(ang) * R * 0.9, p.y + Math.sin(ang) * R * 0.78);
+            ctx.lineTo(p.x + Math.cos(ang) * R * 1.06, p.y + Math.sin(ang) * R * 0.92);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        function drawAsteroid(e) {
+          var p = project(e.worldX, 0, relZ(e));
+          if (p.k <= 0) return;
+          var R = e.radius * p.k;
+          var c = e.resolved && e.hit ? { r: 255, g: 120, b: 96 } : darken(palRgb(e.hue), 0.35);
+          var rot = e.rot + state.frame * e.spin * 0.02;
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var gg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R * 3.2);
+          gg.addColorStop(0, rgba(palRgb(e.hue), 0.12));
+          gg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(p.x - R * 3.2, p.y - R * 3.2, R * 6.4, R * 6.4);
+          ctx.restore();
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(rot);
+          ctx.beginPath();
+          var verts = e.verts;
+          for (var v = 0; v < verts.length; v++) {
+            var a = (v / verts.length) * TAU;
+            var rr = R * verts[v];
+            var vx = Math.cos(a) * rr,
+              vy = Math.sin(a) * rr * 0.92;
+            if (v === 0) ctx.moveTo(vx, vy);
+            else ctx.lineTo(vx, vy);
+          }
+          ctx.closePath();
+          var rg = ctx.createRadialGradient(-R * 0.3, -R * 0.3, R * 0.1, 0, 0, R * 1.3);
+          rg.addColorStop(0, rgba(lighten(c, 0.28), 0.98));
+          rg.addColorStop(0.65, rgba(c, 0.96));
+          rg.addColorStop(1, rgba(darken(c, 0.6), 0.95));
+          ctx.fillStyle = rg;
+          ctx.fill();
+          ctx.strokeStyle = rgba(darken(c, 0.7), 0.7);
+          ctx.lineWidth = Math.max(0.5, R * 0.06);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        function probeScreen() {
+          // The probe sits at relative z = 0 and shares the entity projection, so a
+          // ring and the probe line up exactly at the crossing frame.
+          return project(state.x, state.y, 0);
+        }
+
+        function drawProbe() {
+          var p = probeScreen();
+          var R = 13 * (view.min / 360);
+          var glow = state.boostGlow;
+          var c = hexToRgb(pal()[4 % pal().length]);
+          var warm = hexToRgb(pal()[0]);
+
+          ctx.save();
+          // engine trail
+          ctx.globalCompositeOperation = 'lighter';
+          var len = R * (3.4 + glow * 4.5);
+          var tg = ctx.createLinearGradient(0, p.y, 0, p.y + len);
+          tg.addColorStop(0, rgba(warm, 0.55 + 0.4 * glow));
+          tg.addColorStop(0.5, rgba(c, 0.22 + 0.3 * glow));
+          tg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = tg;
+          ctx.beginPath();
+          ctx.moveTo(p.x - R * 0.5, p.y);
+          ctx.lineTo(p.x + R * 0.5, p.y);
+          ctx.lineTo(p.x + R * 0.18, p.y + len);
+          ctx.lineTo(p.x - R * 0.18, p.y + len);
+          ctx.closePath();
+          ctx.fill();
+
+          var hg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R * 3);
+          hg.addColorStop(0, rgba(c, 0.35 + 0.3 * glow));
+          hg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = hg;
+          ctx.fillRect(p.x - R * 3, p.y - R * 3, R * 6, R * 6);
+
+          // hull
+          var bank = clamp(state.vx * 0.12, -0.5, 0.5);
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(bank);
+          ctx.beginPath();
+          ctx.moveTo(0, -R * 1.15);
+          ctx.lineTo(R * 0.82, R * 0.9);
+          ctx.lineTo(0, R * 0.5);
+          ctx.lineTo(-R * 0.82, R * 0.9);
+          ctx.closePath();
+          var bg = ctx.createLinearGradient(0, -R, 0, R);
+          bg.addColorStop(0, '#eaf2ff');
+          bg.addColorStop(0.5, rgba(c, 1));
+          bg.addColorStop(1, rgba(darken(c, 0.5), 1));
+          ctx.fillStyle = bg;
+          ctx.fill();
+          ctx.strokeStyle = rgba(warm, 0.9);
+          ctx.lineWidth = Math.max(0.8, R * 0.08);
+          ctx.stroke();
+          ctx.fillStyle = rgba(warm, 0.9 + 0.1 * glow);
+          ctx.beginPath();
+          ctx.arc(0, -R * 0.15, R * 0.16, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+          ctx.restore();
+        }
+
+        function drawHUD() {
+          var W = view.w,
+            H = view.h;
+          var s = view.min / 360;
+          ctx.save();
+          ctx.textBaseline = 'middle';
+          // title
+          ctx.font = (11 * s).toFixed(0) + 'px ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(159,178,224,0.9)';
+          ctx.textAlign = 'left';
+          ctx.fillText(String(params.title || '').toUpperCase(), 14 * s, 20 * s);
+          // score
+          ctx.textAlign = 'right';
+          ctx.font = 'bold ' + (18 * s).toFixed(0) + 'px ui-monospace, monospace';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(String(state.score), W - 14 * s, 22 * s);
+          ctx.font = (9 * s).toFixed(0) + 'px ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(124,240,255,0.85)';
+          ctx.fillText('SCORE', W - 14 * s, 8 * s);
+          // speed / combo bar
+          var frac = clamp(
+            (state.speed - params.baseSpeed) / Math.max(0.001, params.boostSpeed - params.baseSpeed),
+            0,
+            1,
+          );
+          var bw = 126 * s,
+            bx = 24 * s,
+            by = H - 28 * s;
+          ctx.fillStyle = 'rgba(8,16,35,0.92)';
+          ctx.fillRect(bx - 8 * s, by - 29 * s, bw + 16 * s, 46 * s);
+          ctx.fillStyle = 'rgba(111,137,174,0.7)';
+          ctx.fillRect(bx, by, bw, 9 * s);
+          ctx.fillStyle = frac > 0.08 ? '#ffd166' : '#7cf0ff';
+          ctx.fillRect(bx, by, bw * (0.25 + 0.75 * frac), 9 * s);
+          ctx.strokeStyle = 'rgba(244,248,255,0.85)';
+          ctx.lineWidth = Math.max(1, s);
+          for (var tick = 0; tick <= 4; tick++) {
+            var tx = bx + (bw * tick) / 4;
+            ctx.beginPath();
+            ctx.moveTo(tx, by);
+            ctx.lineTo(tx, by + 9 * s);
+            ctx.stroke();
+          }
+          ctx.fillStyle = '#f4f8ff';
+          ctx.font = 'bold ' + (13 * s).toFixed(0) + 'px ui-monospace, monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText('SPEED ' + (state.speed / Math.max(0.001, params.baseSpeed)).toFixed(2) + 'x', bx, by - 12 * s);
+          if (state.combo > 1) {
+            ctx.fillStyle = rgba(hexToRgb(pal()[0]), 0.95);
+            ctx.textAlign = 'right';
+            ctx.font = 'bold ' + (12 * s).toFixed(0) + 'px ui-monospace, monospace';
+            ctx.fillText('×' + state.combo, W - 14 * s, H - 20 * s);
+          }
+          ctx.restore();
+        }
+
+        function draw() {
+          var W = view.w,
+            H = view.h;
+          ctx.save();
+          if (state.shake > 0.01) {
+            var m = state.shake * 5 * (view.min / 360);
+            ctx.translate(Math.sin(state.frame * 7.3) * m, Math.cos(state.frame * 5.1) * m);
+          }
+          drawBackground();
+          drawNebula();
+          drawStars();
+
+          var ents = state.entities.slice().sort(function (a, b) {
+            return relZ(b) - relZ(a);
+          });
+          for (var i = 0; i < ents.length; i++) {
+            if (ents[i].kind === 'ring') drawRing(ents[i]);
+            else drawAsteroid(ents[i]);
+          }
+
+          drawProbe();
+          ctx.restore();
+
+          // collision flash
+          if (state.flash > 0.01) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = 'rgba(255,80,60,' + (state.flash * 0.18).toFixed(3) + ')';
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+          }
+          // boost flare at the edges
+          if (state.boostGlow > 0.01) {
+            var g = ctx.createRadialGradient(W / 2, H * 0.7, view.min * 0.2, W / 2, H * 0.7, view.min * 0.75);
+            g.addColorStop(0, 'rgba(0,0,0,0)');
+            g.addColorStop(1, rgba(hexToRgb(pal()[0]), 0.1 * state.boostGlow));
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+          }
+
+          // grain + vignette
+          if (!grainCanvas || grainKey !== seed) buildGrain(seed);
+          var ox = -((state.frame * 37) % 128),
+            oy = -((state.frame * 53) % 128);
+          ctx.save();
+          ctx.globalCompositeOperation = 'overlay';
+          ctx.globalAlpha = 0.3;
+          var pat = ctx.createPattern(grainCanvas, 'repeat');
+          if (pat) {
+            ctx.translate(ox, oy);
+            ctx.fillStyle = pat;
+            ctx.fillRect(-ox, -oy, W + 128, H + 128);
+          }
+          ctx.restore();
+
+          var vg = ctx.createRadialGradient(
+            W / 2,
+            H / 2,
+            Math.min(W, H) * 0.28,
+            W / 2,
+            H / 2,
+            Math.sqrt(W * W + H * H) / 2,
+          );
+          vg.addColorStop(0, 'rgba(0,0,0,0)');
+          vg.addColorStop(1, 'rgba(0,0,0,0.62)');
+          ctx.fillStyle = vg;
+          ctx.fillRect(0, 0, W, H);
+
+          drawHUD();
+        }
+
+        function syncDomHud() {
+          if (scoreEl) scoreEl.textContent = String(state.score);
+          if (speedEl) speedEl.textContent = (state.speed / Math.max(0.001, params.baseSpeed)).toFixed(2);
+          if (a11yEl)
+            a11yEl.textContent =
+              'score ' +
+              state.score +
+              ', speed ' +
+              (state.speed / Math.max(0.001, params.baseSpeed)).toFixed(2) +
+              ' times';
+        }
+
+        // ── live loop (fixed 30 Hz accumulator) ────────────────────────────────────
+        function liveLoop(now) {
+          if (controlled) return;
+          if (!liveLast) liveLast = now;
+          var delta = Math.min(0.1, (now - liveLast) / 1000);
+          liveLast = now;
+          liveAcc += delta;
+          var guard = 0;
+          while (liveAcc >= DT && guard < 6) {
+            var f = state.frame + 1;
+            applyEventsFor(f); // honour recorded input if the runtime replays it live
+            stepOnce(f);
+            liveAcc -= DT;
+            guard++;
+          }
+          if (guard >= 6) liveAcc = 0;
+          draw();
+          syncDomHud();
+          raf = requestAnimationFrame(liveLoop);
+        }
+
+        // ── external contract ──────────────────────────────────────────────────────
+        function ready() {
+          return Promise.resolve();
+        }
+
+        function ensureParams(opts) {
+          var incoming = Object.assign({}, DEFAULT_PARAMS, opts.params || {});
+          var key = paramKeyOf(incoming) + '|' + (opts.seed | 0);
+          if (key !== paramsKey) {
+            params = incoming;
+            seed = opts.seed | 0;
+            paramsKey = key;
+            primeSim(); // re-primes the world; never touches the recorded schedule
+            return true;
+          }
+          return false;
+        }
+
+        // Called by the capture harness after ready() and before frame 0 / the
+        // lifecycle beforeFrame hooks. Stops the live loop, enters offline mode and
+        // prepares the known initial state. It starts a FRESH recording (the DOM
+        // schedule is cleared) — safe because the harness injects its keys AFTER this
+        // call — so the frame-0 key is tagged to frame 0 and a repeated pass on the
+        // same loaded page cannot replay a previous run. The simulation is primed at
+        // frame -1 so the next render advances once into frame 0 with that key held.
+        // Re-priming uses the params/seed already set by a prior render when present.
+        function reset() {
+          controlled = true;
+          if (raf) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+          }
+          if (overlay) overlay.classList.add('hidden');
+          domEvents = [];
+          simFps = FPS;
+          DT = 1 / simFps;
+          primeSim();
+        }
+
+        function render(opts) {
+          opts = opts || {};
+          controlled = true;
+          if (raf) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+          }
+          if (overlay) overlay.classList.add('hidden');
+
+          // Offline capture may run at any fps; step exactly 1/fps so the timeline is
+          // correct (the live preview always runs at FPS). Reject nonsense values
+          // rather than silently claiming support.
+          var fps = opts.fps;
+          if (fps === undefined || fps === null) fps = FPS;
+          if (typeof fps !== 'number' || !isFinite(fps) || fps <= 0 || fps > 1000) {
+            throw new Error('playable: unsupported fps ' + String(opts.fps));
+          }
+          simFps = fps;
+          DT = 1 / simFps;
+
+          var frame = typeof opts.frame === 'number' ? opts.frame : Math.round((opts.time || 0) * fps);
+          var width = Math.max(2, Math.round(opts.width || canvas.width));
+          var height = Math.max(2, Math.round(opts.height || canvas.height));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+          }
+          updateView(width, height);
+
+          // Apply params/seed. This may re-prime the world, but it never drops the
+          // recorded schedule, so a key injected before the first render still lands
+          // on frame 0 and frame 0's state() reflects the held key.
+          ensureParams(opts);
+          if (!state) primeSim();
+          simulateTo(Math.max(0, frame | 0));
+          draw();
+        }
+
+        function dispose() {
+          controlled = true;
+          if (raf) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+          }
+        }
+
+        function stateSnapshot() {
+          var events = state.events.map(function (e) {
+            var out = { type: e.type, frame: e.frame };
+            if (e.x !== undefined) out.x = e.x;
+            if (e.combo !== undefined) out.combo = e.combo;
+            return out;
+          });
+          if (events.length > 256) events = events.slice(events.length - 256);
+          return {
+            frame: state.frame,
+            x: round(state.x),
+            y: round(state.y),
+            velocity: round(state.speed),
+            score: state.score,
+            events: events,
+            camera: { x: round(cam.x), y: round(cam.y) },
+          };
+        }
+
+        // ── input wiring ───────────────────────────────────────────────────────────
+        function onKeyDown(ev) {
+          var k = normalizeKey(ev);
+          if (!k) return;
+          if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'Space') {
+            if (ev.preventDefault) ev.preventDefault();
+          }
+          // Runtime-driven recording: an explicit target frame (set by the recorder
+          // before dispatching the real key) always wins, and is recorded without
+          // also driving the live preview — so it can never double-apply.
+          var override = window.__viscraftInputFrame;
+          if (typeof override === 'number') {
+            domEvents.push({ frame: override | 0, key: k, down: true });
+            return;
+          }
+          if (controlled) {
+            // Fallback tagging: after reset() the sim is primed at -1, so an event
+            // injected before the first render is tagged to frame 0.
+            var f = state ? Math.max(0, state.frame + 1) : 0;
+            domEvents.push({ frame: f, key: k, down: true });
+            pressed[k] = true;
+            return;
+          }
+          if (k === 'KeyR') {
+            primeSim();
+            return;
+          }
+          pressed[k] = true;
+        }
+        function onKeyUp(ev) {
+          var k = normalizeKey(ev);
+          if (!k) return;
+          var override = window.__viscraftInputFrame;
+          if (typeof override === 'number') {
+            domEvents.push({ frame: override | 0, key: k, down: false });
+            return;
+          }
+          if (controlled) {
+            var f = state ? Math.max(0, state.frame + 1) : 0;
+            domEvents.push({ frame: f, key: k, down: false });
+            pressed[k] = false;
+            return;
+          }
+          pressed[k] = false;
+        }
+
+        window.addEventListener('keydown', onKeyDown, false);
+        window.addEventListener('keyup', onKeyUp, false);
+        if (canvas && typeof canvas.focus === 'function') canvas.focus();
+
+        // ── boot ───────────────────────────────────────────────────────────────────
+        simFps = FPS;
+        DT = 1 / simFps;
+        primeSim();
+        updateView(canvas.width, canvas.height);
+        window.viscraft = { ready: ready, reset: reset, render: render, dispose: dispose, state: stateSnapshot };
+
+        if (typeof requestAnimationFrame === 'function') {
+          raf = requestAnimationFrame(liveLoop);
+        }
+      })();
+    </script>
+  </body>
+</html>

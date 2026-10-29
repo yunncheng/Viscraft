@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viscraft · cutout compositor</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #09131d;
+        overflow: hidden;
+      }
+      /* The capture viewport is exactly the output size; the canvas fills it so the
+     screenshot is the rendered frame, not a page around it. */
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" width="1280" height="720"></canvas>
+    <script>
+      /*
+       * Viscraft CodeScene: an approved-image cutout compositor.
+       *
+       * Offline capture contract (see src/backends/browser/capture.ts):
+       *   window.viscraft = { render: async (ctx) => void, dispose?: () => void }
+       *
+       * render(ctx) receives { frame, time, fps, width, height, seed, params, bindings }.
+       * `bindings` maps the declared binding names ('background', 'sprite') to
+       * { id, url, sha256 } served from the capture snapshot.
+       *
+       * This page composites the caller-approved raster images itself:
+       *   1. an opaque background fill (params.backgroundColor), then
+       *   2. the background image fitted cover/contain and centered, then
+       *   3. the sprite PNG with its real alpha drawn source-over at the authored pose.
+       *
+       * The sprite pose is a pure linear interpolation between params.from and
+       * params.to over t = frame / (frames - 1). Values are normalized to the output
+       * frame (x/y relative to width/height, width as a fraction of output width,
+       * rotation in degrees). There is no wall clock, no randomness and no physics:
+       * every frame is a pure function of (ctx.frame, ctx.params). The page never
+       * recovers source coordinates and never silently crops the inputs; it only
+       * fits the background and places the sprite.
+       */
+      (function () {
+        'use strict';
+
+        var canvas = document.getElementById('stage');
+        // alpha:false keeps the canvas opaque so the captured PNG has no transparent
+        // border; the sprite's own alpha still blends correctly through source-over.
+        var context = canvas.getContext('2d', { alpha: false });
+
+        // Loaded images are cached by URL only: the same snapshot URL always yields
+        // the same decoded bitmap, so frame-to-frame renders stay deterministic.
+        var imageByUrl = new Map();
+
+        function lerp(a, b, t) {
+          return a + (b - a) * t;
+        }
+
+        async function loadBinding(binding) {
+          if (!binding || typeof binding.url !== 'string' || binding.url.length === 0) {
+            throw new Error('cutout: a required binding was not provided by the capture');
+          }
+          var cached = imageByUrl.get(binding.url);
+          if (cached) return cached;
+          var image = new Image();
+          image.src = binding.url;
+          await image.decode();
+          if (!image.naturalWidth || !image.naturalHeight) {
+            throw new Error('cutout: binding image "' + binding.url + '" decoded with zero natural dimensions');
+          }
+          imageByUrl.set(binding.url, image);
+          return image;
+        }
+
+        function drawFitted(g, image, width, height, fit) {
+          var nw = image.naturalWidth;
+          var nh = image.naturalHeight;
+          var scale = fit === 'contain' ? Math.min(width / nw, height / nh) : Math.max(width / nw, height / nh);
+          var drawWidth = nw * scale;
+          var drawHeight = nh * scale;
+          g.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+        }
+
+        function drawSprite(g, image, pose, pivot, width, height) {
+          // Displayed width is authored as a fraction of the output width; the height
+          // follows the sprite's real aspect ratio so it is never distorted.
+          var drawWidth = pose.width * width;
+          var drawHeight = drawWidth * (image.naturalHeight / image.naturalWidth);
+          g.save();
+          g.translate(pose.x * width, pose.y * height);
+          g.rotate((pose.rotation * Math.PI) / 180);
+          // Pivot is normalized to the (aspect-preserving) displayed bounds, i.e. the
+          // original image bounds. The pivot lands exactly on the translated origin.
+          g.drawImage(image, -pivot.x * drawWidth, -pivot.y * drawHeight, drawWidth, drawHeight);
+          g.restore();
+        }
+
+        async function render(opts) {
+          opts = opts || {};
+          var width = Math.max(2, Math.round(opts.width || canvas.width));
+          var height = Math.max(2, Math.round(opts.height || canvas.height));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+          }
+
+          var params = opts.params || {};
+          var bindings = opts.bindings || {};
+          var background = await loadBinding(bindings.background);
+          var sprite = await loadBinding(bindings.sprite);
+
+          var frames = Number.isInteger(params.frames) && params.frames > 0 ? params.frames : 1;
+          var frame = Number.isInteger(opts.frame) ? opts.frame : 0;
+          var t = frames > 1 ? frame / (frames - 1) : 0;
+
+          var from = params.from || { x: 0.5, y: 0.5, width: 0.5, rotation: 0 };
+          var to = params.to || from;
+          var pose = {
+            x: lerp(from.x, to.x, t),
+            y: lerp(from.y, to.y, t),
+            width: lerp(from.width, to.width, t),
+            rotation: lerp(from.rotation, to.rotation, t),
+          };
+          var pivot = params.pivot || { x: 0.5, y: 0.5 };
+          var fit = params.backgroundFit === 'contain' ? 'contain' : 'cover';
+          var backgroundColor = typeof params.backgroundColor === 'string' ? params.backgroundColor : '#09131d';
+
+          context.setTransform(1, 0, 0, 1, 0, 0);
+          context.globalAlpha = 1;
+          context.globalCompositeOperation = 'source-over';
+          context.fillStyle = backgroundColor;
+          context.fillRect(0, 0, width, height);
+
+          drawFitted(context, background, width, height, fit);
+          drawSprite(context, sprite, pose, pivot, width, height);
+        }
+
+        function dispose() {
+          imageByUrl.clear();
+        }
+
+        window.viscraft = { render: render, dispose: dispose };
+      })();
+    </script>
+  </body>
+</html>

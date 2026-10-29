@@ -1,0 +1,16 @@
+{
+  "method": "Visual inspection of the actual comic screenshot, edited photograph and side-by-side normalized comparison; no semantic CV or recovered 3D claimed",
+  "comicAsset": "comic-world-anchor",
+  "photoAsset": "photo-world-anchor",
+  "observed": [
+    {"object":"near limestone parapet","continuity":"horizontal across the lower-middle frame, immediately behind the bicycle in both"},
+    {"object":"coral/yellow village with teal shutters","continuity":"right and rear bank in both; facade arrangement remains recognizably corresponding"},
+    {"object":"bell tower","continuity":"upper center-right hillside in both"},
+    {"object":"sailboats","continuity":"small cream sails at left and right across the same harbour"},
+    {"object":"mountain ridge","continuity":"left/rear silhouette and village-covered right hillside preserved"},
+    {"object":"rider and teal bicycle","continuity":"right-facing side silhouette, handlebar and two wheel centers at closely corresponding positions"},
+    {"object":"ground and waterline","continuity":"ochre paving in foreground, low parapet, harbour behind; no replacement by open beach at the anchor"},
+    {"object":"light and material","continuity":"photograph changes blue-day paint to warm gold material/light, while light direction remains from the left"}
+  ],
+  "notGuaranteed": "Exact pixel identity and future H3 temporal adherence; actual generated video must be inspected before selecting it"
+}

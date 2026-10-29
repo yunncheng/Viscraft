@@ -1,0 +1,237 @@
+@font-face {
+  font-family: "Archive CJK";
+  src: url("fonts/NotoSansSC-400-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archive CJK";
+  src: url("fonts/NotoSansSC-700-subset.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archive Latin";
+  src: url("fonts/SpaceGrotesk-400-subset.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archive Latin";
+  src: url("fonts/SpaceGrotesk-700-subset.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+
+html,
+body {
+  margin: 0;
+  width: 1200px;
+  height: 1500px;
+  overflow: hidden;
+  background: #f4efe6;
+}
+
+.poster {
+  position: relative;
+  width: 1200px;
+  height: 1500px;
+  background: #f4efe6;
+  color: #1c1a17;
+  font-family: "Archive CJK", sans-serif;
+}
+
+.masthead {
+  position: absolute;
+  left: 80px;
+  top: 56px;
+  width: 1040px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.mast-left,
+.mast-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mast-right {
+  align-items: flex-end;
+}
+.mast-cjk {
+  font-family: "Archive CJK", sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 4px;
+}
+.mast-latin {
+  font-family: "Archive Latin", sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: #514a41;
+}
+.mast-dim {
+  color: #7c7368;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 3px;
+}
+
+.rule {
+  position: absolute;
+  left: 80px;
+  height: 1px;
+  background: #1c1a17;
+}
+.rule-top {
+  top: 148px;
+  width: 1040px;
+}
+
+.plate {
+  position: absolute;
+  left: 80px;
+  top: 178px;
+  width: 1040px;
+  height: 740px;
+  margin: 0;
+  overflow: hidden;
+  background: #cfc6b8;
+}
+.plate-image {
+  position: absolute;
+  inset: 0;
+  width: 1040px;
+  height: 740px;
+  object-fit: cover;
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 17, 14, 0) 46%,
+    rgba(20, 17, 14, 0.18) 66%,
+    rgba(20, 17, 14, 0.72) 100%
+  );
+}
+.plate-caption {
+  position: absolute;
+  left: 24px;
+  top: 20px;
+  font-family: "Archive CJK", sans-serif;
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: #efe7d8;
+}
+
+.headline {
+  position: absolute;
+  left: 100px;
+  top: 782px;
+  margin: 0;
+  font-family: "Archive CJK", sans-serif;
+  font-weight: 700;
+  font-size: 152px;
+  line-height: 0.96;
+  letter-spacing: 10px;
+  color: #f7f2e7;
+  text-shadow: 0 2px 24px rgba(20, 17, 14, 0.35);
+}
+.headline-en {
+  position: absolute;
+  left: 106px;
+  top: 936px;
+  margin: 0;
+  font-family: "Archive Latin", sans-serif;
+  font-weight: 700;
+  font-size: 30px;
+  letter-spacing: 15px;
+  color: #b4472a;
+}
+
+.lede {
+  position: absolute;
+  left: 80px;
+  top: 1000px;
+  width: 560px;
+}
+.lede p {
+  margin: 0;
+  font-family: "Archive CJK", sans-serif;
+  font-weight: 400;
+  font-size: 25px;
+  line-height: 1.95;
+  letter-spacing: 1px;
+  color: #3a352e;
+}
+
+.facts {
+  position: absolute;
+  left: 760px;
+  top: 1008px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  border-left: 3px solid #b4472a;
+  padding-left: 24px;
+}
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fact-label {
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: #8a7f72;
+}
+.fact-value {
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: #1c1a17;
+}
+
+.index {
+  position: absolute;
+  left: 78px;
+  top: 1170px;
+  font-family: "Archive Latin", sans-serif;
+  font-weight: 700;
+  font-size: 240px;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 2px #b4472a;
+  opacity: 0.45;
+}
+
+.colophon {
+  position: absolute;
+  left: 80px;
+  top: 1392px;
+  width: 1040px;
+}
+.rule-foot {
+  position: static;
+  width: 1040px;
+  background: #bdb3a5;
+}
+.colophon-row {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.colophon-row .mast-cjk {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  color: #514a41;
+}
+.colophon-row .mast-latin {
+  font-size: 13px;
+  letter-spacing: 4px;
+}

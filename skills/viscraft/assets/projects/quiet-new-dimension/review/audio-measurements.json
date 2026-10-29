@@ -1,0 +1,35 @@
+{
+  "media": "../movie/final.mp4",
+  "sha256": "d7c4179cd062aaf2c0476a27c34ec6435313a31a514c12bd93ac79aa3443d5b1",
+  "method": {
+    "tool": "ffmpeg version 9.0.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+    "filter": "ebur128=peak=true,silencedetect=noise=-60dB:d=0.25",
+    "stream": "first audio stream; final AAC decoded to PCM"
+  },
+  "integratedLufs": -18.4,
+  "loudnessRangeLu": 11.6,
+  "truePeakDbtp": -1.9,
+  "silence": [
+    {
+      "startSeconds": 0,
+      "endSeconds": 2.000792,
+      "durationSeconds": 2.000792
+    },
+    {
+      "startSeconds": 8.41925,
+      "endSeconds": 9.200833,
+      "durationSeconds": 0.781583
+    },
+    {
+      "startSeconds": 25.053896,
+      "endSeconds": 26.450521,
+      "durationSeconds": 1.396625
+    },
+    {
+      "startSeconds": 28.484208,
+      "endSeconds": 30,
+      "durationSeconds": 1.515792
+    }
+  ],
+  "observation": "Signal measurements of the included final film; no subjective listening or artistic acceptance claim."
+}

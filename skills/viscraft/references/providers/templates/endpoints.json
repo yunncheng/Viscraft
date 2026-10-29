@@ -1,0 +1,12 @@
+{
+  "video": [
+    {
+      "endpoint": "default",
+      "service": "vllm-omni",
+      "model": "minimax-h3-base-ref2va",
+      "url": "http://127.0.0.1:8000",
+      "apiKey": ""
+    }
+  ],
+  "image": []
+}

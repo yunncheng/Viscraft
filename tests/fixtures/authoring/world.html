@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SIGNAL RUN — World renderer</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #04060d;
+      }
+      canvas {
+        display: block;
+        image-rendering: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <script>
+      /*
+       * tests/fixtures/authoring/world.html — a code-native renderer for a Viscraft World Source.
+       *
+       * This page is NOT a World simulator and NOT a second asset registry. It is a
+       * plain CPU 2D-canvas rasterizer with hand-written perspective projection. It
+       * draws whatever the runtime hands it each frame:
+       *
+       *   window.__viscraftWorld = {
+       *     id, revision, frame, fps:{numerator,denominator},
+       *     units:'meters', coordinates:'right-handed-y-up',
+       *     entities:[ { id, asset, transform:{position:[x,y,z],
+       *                                          rotation:[rx,ry,rz],
+       *                                          scale:[sx,sy,sz]}, state } ],
+       *     camera:{ id, position:[x,y,z], target:[x,y,z], fov, follow? }
+       *   }
+       *
+       * Contract this page relies on:
+       *  - `entities[*].transform` is ALREADY sampled from the World trajectories for
+       *    the current shared world frame (this page does no interpolation).
+       *  - `camera` is the FINAL resolved camera for the selected World camera; any
+       *    `follow` offset has ALREADY been applied by the runtime. This page only
+       *    projects and draws.
+       *  - `ctx.frame` is the 0-based LOCAL source frame; `__viscraftWorld.frame` is
+       *    the SHARED world frame. Progress/HUD use the shared frame.
+       *  - `ctx.bindings` maps binding key -> { id, url, sha256 }. Entity sprites are
+       *    matched by `binding.id === entity.asset`. Sprites are optional: if a binding
+       *    is absent the entity still draws procedurally from its state palette.
+       *
+       * Look/motion is a pure function of (world snapshot, ctx.params, ctx.frame): no
+       * wall clock, no unseeded randomness, no network. The only async work is a
+       * one-time image load on the first render; every later frame is synchronous.
+       *
+       * Standalone preview: if `__viscraftWorld` is absent (e.g. the file is opened
+       * directly in a browser for a look), params.preview === true explicitly enables
+       * a labelled preview route sampler. Otherwise missing state fails. Runtime never
+       * uses that fallback.
+       */
+      (function () {
+        'use strict';
+
+        var FALLBACK_ROUTE = [
+          [-15, 1.1, -4.0],
+          [-9, 1.3, -1.5],
+          [-4, 1.5, 1.5],
+          [1, 1.6, 2.6],
+          [6, 1.5, 0.6],
+          [11, 1.7, -2.2],
+          [16, 1.9, -0.6],
+        ];
+        var FALLBACK_PALETTE = {
+          bgTop: '#050a18',
+          bgBottom: '#0b1a2e',
+          grid: '#12314f',
+          route: '#2f6d9c',
+          courier: '#7cf0ff',
+          gate: '#4dabf7',
+          gate2: '#b28dff',
+          drone: '#ff6ec7',
+          hud: '#8fb6d6',
+        };
+
+        // --- tiny vector helpers (right-handed, y-up) ------------------------------
+        function sub(a, b) {
+          return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+        }
+        function dot(a, b) {
+          return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        }
+        function cross(a, b) {
+          return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+        }
+        function norm(a) {
+          var m = Math.sqrt(dot(a, a)) || 1;
+          return [a[0] / m, a[1] / m, a[2] / m];
+        }
+        function lerp3(a, b, t) {
+          return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+        }
+        function mixHex(a, b, t) {
+          function ch(h, i) {
+            return parseInt(h.substr(i, 2), 16);
+          }
+          var r = Math.round(ch(a, 1) + (ch(b, 1) - ch(a, 1)) * t);
+          var g = Math.round(ch(a, 3) + (ch(b, 3) - ch(a, 3)) * t);
+          var bl = Math.round(ch(a, 5) + (ch(b, 5) - ch(a, 5)) * t);
+          return 'rgb(' + r + ',' + g + ',' + bl + ')';
+        }
+        function rgba(hex, a) {
+          function ch(h, i) {
+            return parseInt(h.substr(i, 2), 16);
+          }
+          return 'rgba(' + ch(hex, 1) + ',' + ch(hex, 3) + ',' + ch(hex, 5) + ',' + a + ')';
+        }
+
+        // deterministic hash -> [0,1); used only for stable decorative jitter
+        function hash01(n) {
+          var x = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
+          return x - Math.floor(x);
+        }
+
+        // --- camera ----------------------------------------------------------------
+        function makeView(cam, width, height) {
+          var eye = cam.position;
+          var forward = norm(sub(cam.target, eye));
+          var right = norm(cross(forward, [0, 1, 0]));
+          if (!isFinite(right[0]) || (right[0] === 0 && right[1] === 0 && right[2] === 0)) right = [1, 0, 0];
+          var up = cross(right, forward);
+          var fov = Math.max(1, Math.min(179, cam.fov || 55));
+          var focal = height / 2 / Math.tan((fov * Math.PI) / 360);
+          return {
+            eye: eye,
+            right: right,
+            up: up,
+            forward: forward,
+            focal: focal,
+            project: function (p) {
+              var v = sub(p, eye);
+              var z = dot(v, forward);
+              if (z <= 0.05) return null;
+              var x = dot(v, right);
+              var y = dot(v, up);
+              return { x: width / 2 + (x * focal) / z, y: height / 2 - (y * focal) / z, z: z };
+            },
+          };
+        }
+
+        // --- sprite loading + tinting (optional, defensive) ------------------------
+        var sprites = {}; // assetId -> { img, status, promise }
+        var tintCache = {}; // assetId|color -> canvas
+        var spritesRequested = false;
+
+        function requestSprites(bindings) {
+          if (!bindings || spritesRequested) return;
+          spritesRequested = true;
+          Object.keys(bindings).forEach(function (key) {
+            var b = bindings[key];
+            if (!b || !b.url || !b.id || sprites[b.id]) return;
+            var img = new Image();
+            var entry = { img: img, status: 'loading' };
+            entry.promise = new Promise(function (resolve, reject) {
+              img.onload = function () {
+                entry.status = 'ok';
+                resolve();
+              };
+              img.onerror = function () {
+                entry.status = 'error';
+                reject(new Error('Failed to load declared asset ' + b.id));
+              };
+            });
+            img.src = b.url;
+            sprites[b.id] = entry;
+          });
+        }
+
+        function spriteFor(assetId, color) {
+          var entry = sprites[assetId];
+          if (!entry || entry.status !== 'ok' || !entry.img.naturalWidth) return null;
+          var key = assetId + '|' + color;
+          if (tintCache[key]) return tintCache[key];
+          var w = entry.img.naturalWidth,
+            h = entry.img.naturalHeight;
+          var c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          var g = c.getContext('2d');
+          g.drawImage(entry.img, 0, 0);
+          g.globalCompositeOperation = 'source-in';
+          g.fillStyle = color;
+          g.fillRect(0, 0, w, h);
+          tintCache[key] = c;
+          return c;
+        }
+
+        // --- preview-only fallback (runtime path never reaches this) ---------------
+        function previewWorld(params, frame, frames) {
+          var route = (params && params.route) || FALLBACK_ROUTE;
+          var segs = route.length - 1;
+          function sampler(offset) {
+            return {
+              position: (function () {
+                var t = (frame / Math.max(1, frames - 1)) * segs;
+                var i = Math.min(segs - 1, Math.floor(t));
+                var p = lerp3(route[i], route[i + 1], t - i);
+                return [p[0] + offset[0], p[1] + offset[1], p[2] + offset[2]];
+              })(),
+            };
+          }
+          var courier = sampler([0, 0, 0]).position;
+          var drone = sampler([-3.4, 3.0, 2.4]).position;
+          var gates = (params && params.gates) || [route[1], route[3], route[5]];
+          var cam = {
+            id: 'preview',
+            position: [courier[0] - 7, 5.2, courier[2] - 8],
+            target: [courier[0] + 2, courier[1] - 0.4, courier[2]],
+            fov: 55,
+          };
+          return {
+            frame: frame,
+            id: 'preview',
+            revision: 0,
+            preview: true,
+            camera: cam,
+            entities: [
+              {
+                id: 'entity_courier',
+                asset: 'asset_courier',
+                transform: { position: courier, rotation: [0, 0, 0], scale: [1, 1, 1] },
+                state: { role: 'courier', palette: '#7cf0ff' },
+              },
+              {
+                id: 'entity_drone',
+                asset: 'asset_drone',
+                transform: { position: drone, rotation: [0, 0, 0], scale: [1, 1, 1] },
+                state: { role: 'drone', palette: '#ff6ec7' },
+              },
+            ].concat(
+              gates.map(function (g, i) {
+                return {
+                  id: 'entity_gate_' + i,
+                  asset: 'asset_gate',
+                  transform: { position: g, rotation: [0, 0, 0], scale: [1, 1, 1] },
+                  state: { role: 'gate', index: i },
+                };
+              }),
+            ),
+          };
+        }
+
+        // --- drawing ---------------------------------------------------------------
+        function drawSky(g, W, H, pal) {
+          var sky = g.createLinearGradient(0, 0, 0, H);
+          sky.addColorStop(0, pal.bgTop);
+          sky.addColorStop(0.62, pal.bgBottom);
+          sky.addColorStop(0.63, mixHex(pal.bgBottom, pal.grid, 0.35));
+          sky.addColorStop(1, pal.bgTop);
+          g.fillStyle = sky;
+          g.fillRect(0, 0, W, H);
+          // stable starfield (decorative, seeded by index only)
+          g.save();
+          for (var i = 0; i < 90; i++) {
+            var sx = hash01(i * 1.7) * W;
+            var sy = hash01(i * 2.3 + 9) * H * 0.6;
+            var a = 0.1 + hash01(i * 3.1 + 4) * 0.22;
+            g.globalAlpha = a;
+            g.fillStyle = pal.hud;
+            g.fillRect(sx, sy, 1, 1);
+          }
+          g.restore();
+        }
+
+        function drawGrid(g, view, W, H, pal) {
+          g.save();
+          g.lineWidth = 1;
+          g.strokeStyle = pal.grid;
+          g.globalAlpha = 0.55;
+          var spans = [-20, -10, 0, 10, 20];
+          var depth = [-16, -8, 0, 8, 16];
+          for (var i = 0; i < spans.length; i++) {
+            var x = spans[i];
+            var a = view.project([x, 0, -20]);
+            var b = view.project([x, 0, 20]);
+            if (a && b) {
+              g.beginPath();
+              g.moveTo(a.x, a.y);
+              g.lineTo(b.x, b.y);
+              g.stroke();
+            }
+          }
+          for (var j = 0; j < depth.length; j++) {
+            var z = depth[j];
+            var c = view.project([-20, 0, z]);
+            var d = view.project([20, 0, z]);
+            if (c && d) {
+              g.beginPath();
+              g.moveTo(c.x, c.y);
+              g.lineTo(d.x, d.y);
+              g.stroke();
+            }
+          }
+          g.restore();
+        }
+
+        function drawRoute(g, view, route, frame, pal) {
+          // thick depth-faded polyline through the route waypoints
+          g.save();
+          g.lineCap = 'round';
+          for (var i = 0; i < route.length - 1; i++) {
+            var a = view.project(route[i]);
+            var b = view.project(route[i + 1]);
+            if (!a || !b) continue;
+            var width = Math.max(1, 7 / Math.sqrt(a.z));
+            g.strokeStyle = pal.route;
+            g.globalAlpha = 0.85;
+            g.lineWidth = width;
+            g.beginPath();
+            g.moveTo(a.x, a.y);
+            g.lineTo(b.x, b.y);
+            g.stroke();
+          }
+          // travelling dashes show the shared world clock moving along the lane
+          var phase = (frame % 28) / 28;
+          for (var s = 0; s < route.length - 1; s++) {
+            var p0 = route[s],
+              p1 = route[s + 1];
+            for (var k = 0; k < 4; k++) {
+              var t = (k / 4 + phase) % 1;
+              var p = lerp3(p0, p1, t);
+              var q = view.project(p);
+              if (!q) continue;
+              g.globalAlpha = 0.9;
+              g.fillStyle = mixHex(pal.route, pal.courier, 0.6);
+              g.fillRect(q.x - 1.5, q.y - 1.5, 3, 3);
+            }
+          }
+          g.restore();
+        }
+
+        function drawGate(g, view, entity, pal) {
+          var p = view.project(entity.transform.position);
+          if (!p) return;
+          var r = Math.max(6, (26 * (entity.transform.scale[0] || 1)) / Math.sqrt(p.z));
+          var color =
+            (entity.state && entity.state.palette) || (entity.state && entity.state.index === 1 ? pal.gate2 : pal.gate);
+          g.save();
+          g.translate(p.x, p.y);
+          g.globalAlpha = 0.16;
+          g.fillStyle = color;
+          g.beginPath();
+          g.arc(0, 0, r * 1.5, 0, Math.PI * 2);
+          g.fill();
+          g.globalAlpha = 0.95;
+          g.strokeStyle = color;
+          g.lineWidth = Math.max(1.5, r * 0.12);
+          g.beginPath();
+          g.arc(0, 0, r, 0, Math.PI * 2);
+          g.stroke();
+          g.globalAlpha = 0.5;
+          g.lineWidth = Math.max(1, r * 0.06);
+          g.beginPath();
+          g.arc(0, 0, r * 0.62, 0, Math.PI * 2);
+          g.stroke();
+          for (var i = 0; i < 4; i++) {
+            var a = Math.PI / 4 + i * (Math.PI / 2);
+            g.globalAlpha = 0.85;
+            g.beginPath();
+            g.moveTo(Math.cos(a) * r * 0.82, Math.sin(a) * r * 0.82);
+            g.lineTo(Math.cos(a) * r * 1.18, Math.sin(a) * r * 1.18);
+            g.stroke();
+          }
+          var glyph = spriteFor(entity.asset, color);
+          if (glyph) {
+            g.globalAlpha = 0.7;
+            var gs = r * 0.5;
+            g.drawImage(glyph, -gs / 2, -gs / 2, gs, gs);
+          }
+          g.restore();
+        }
+
+        function headingFromRoute(route, position) {
+          var best = 0,
+            bestD = Infinity;
+          for (var i = 0; i < route.length - 1; i++) {
+            var mid = lerp3(route[i], route[i + 1], 0.5);
+            var d = Math.pow(mid[0] - position[0], 2) + Math.pow(mid[2] - position[2], 2);
+            if (d < bestD) {
+              bestD = d;
+              best = i;
+            }
+          }
+          var dir = sub(route[best + 1], route[best]);
+          return Math.atan2(dir[2], dir[0]);
+        }
+
+        function drawCourier(g, view, entity, route, pal, W, H) {
+          var pos = entity.transform.position;
+          var p = view.project(pos);
+          if (!p) return;
+          var color = (entity.state && entity.state.palette) || pal.courier;
+          var size = Math.max(12, (34 * (entity.transform.scale[0] || 1)) / Math.sqrt(p.z));
+          // trail along the route behind the courier
+          g.save();
+          g.lineCap = 'round';
+          for (var t = 1; t <= 6; t++) {
+            var back = [pos[0] - t * 0.7, pos[1] + Math.sin(t * 0.9) * 0.06, pos[2] - t * 0.16];
+            var q = view.project(back);
+            if (!q) continue;
+            g.globalAlpha = 0.26 * (1 - t / 7);
+            g.strokeStyle = color;
+            g.lineWidth = size * 0.18 * (1 - t / 8);
+            g.beginPath();
+            g.moveTo(p.x, p.y);
+            g.lineTo(q.x, q.y);
+            g.stroke();
+          }
+          g.restore();
+
+          var head = headingFromRoute(route, pos);
+          var glyph = spriteFor(entity.asset, color);
+          g.save();
+          g.translate(p.x, p.y);
+          // halo makes the subject unambiguous at any size or camera
+          var glow = g.createRadialGradient(0, 0, 0, 0, 0, size * 1.9);
+          glow.addColorStop(0, rgba(color, 0.5));
+          glow.addColorStop(1, rgba(color, 0));
+          g.globalAlpha = 0.8;
+          g.fillStyle = glow;
+          g.beginPath();
+          g.arc(0, 0, size * 1.9, 0, Math.PI * 2);
+          g.fill();
+          g.globalAlpha = 1;
+          g.rotate(-head);
+          if (glyph) {
+            var gs = size * 2.0;
+            g.fillStyle = mixHex(pal.bgTop, color, 0.35);
+            g.beginPath();
+            g.arc(0, 0, gs * 0.5, 0, Math.PI * 2);
+            g.fill();
+            g.drawImage(glyph, -gs / 2, -gs / 2, gs, gs);
+          } else {
+            g.fillStyle = color;
+            g.beginPath();
+            g.moveTo(size * 0.95, 0);
+            g.lineTo(-size * 0.55, -size * 0.72);
+            g.lineTo(-size * 0.18, 0);
+            g.lineTo(-size * 0.55, size * 0.72);
+            g.closePath();
+            g.fill();
+          }
+          g.restore();
+        }
+
+        function drawDrone(g, view, entity, courier, pal) {
+          var pos = entity.transform.position;
+          var p = view.project(pos);
+          if (!p) return;
+          var color = (entity.state && entity.state.palette) || pal.drone;
+          var size = Math.max(7, (18 * (entity.transform.scale[0] || 1)) / Math.sqrt(p.z));
+          if (courier) {
+            var c = view.project(courier.transform.position);
+            if (c) {
+              g.save();
+              g.globalAlpha = 0.4;
+              g.strokeStyle = color;
+              g.setLineDash([5, 6]);
+              g.lineWidth = 1.5;
+              g.beginPath();
+              g.moveTo(p.x, p.y);
+              g.lineTo(c.x, c.y);
+              g.stroke();
+              g.restore();
+            }
+          }
+          g.save();
+          g.translate(p.x, p.y);
+          var glyph = spriteFor(entity.asset, color);
+          if (glyph) {
+            var gs = size * 2.1;
+            g.fillStyle = mixHex(pal.bgTop, color, 0.4);
+            g.beginPath();
+            g.arc(0, 0, gs * 0.5, 0, Math.PI * 2);
+            g.fill();
+            g.drawImage(glyph, -gs / 2, -gs / 2, gs, gs);
+          } else {
+            g.fillStyle = color;
+            g.beginPath();
+            g.moveTo(0, -size);
+            g.lineTo(size, 0);
+            g.lineTo(0, size);
+            g.lineTo(-size, 0);
+            g.closePath();
+            g.fill();
+          }
+          g.restore();
+        }
+
+        function drawHud(g, W, H, world, params) {
+          var pal = (params && params.palette) || FALLBACK_PALETTE;
+          var label = (params && params.label) || 'WORLD';
+          var total = (params && params.worldFrames) || 240;
+          g.save();
+          g.globalAlpha = 0.72;
+          g.font = '10px ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace';
+          g.textBaseline = 'top';
+          g.fillStyle = pal.hud;
+          var camId = (world.camera && world.camera.id) || 'camera';
+          g.fillText(label + '  ·  ' + camId + '  ·  world frame ' + world.frame + '/' + total, 10, 8);
+          if (world.preview) g.fillText('preview fallback (no runtime snapshot)', 10, 22);
+          // frame corners double as an honest "cut state" marker
+          g.globalAlpha = 0.5;
+          g.lineWidth = 1;
+          g.strokeStyle = pal.hud;
+          var m = 8,
+            L = 12;
+          [
+            [m, m, 1, 1],
+            [W - m, m, -1, 1],
+            [m, H - m, 1, -1],
+            [W - m, H - m, -1, -1],
+          ].forEach(function (c) {
+            g.beginPath();
+            g.moveTo(c[0] + c[2] * L, c[1]);
+            g.lineTo(c[0], c[1]);
+            g.lineTo(c[0], c[1] + c[3] * L);
+            g.stroke();
+          });
+          // route progress bar
+          g.globalAlpha = 0.35;
+          var frac = Math.max(0, Math.min(1, world.frame / Math.max(1, total - 1)));
+          var barW = W - 20;
+          g.fillStyle = pal.grid;
+          g.fillRect(10, H - 10, barW, 2);
+          g.fillStyle = pal.courier;
+          g.fillRect(10, H - 10, barW * frac, 2);
+          g.restore();
+        }
+
+        function draw(ctx, world) {
+          var W = ctx.width || 640,
+            H = ctx.height || 360;
+          var params = ctx.params || {};
+          var pal = params.palette || FALLBACK_PALETTE;
+          var route = params.route || FALLBACK_ROUTE;
+          var canvas = document.getElementById('stage');
+          if (canvas.width !== W || canvas.height !== H) {
+            canvas.width = W;
+            canvas.height = H;
+          }
+          var g = canvas.getContext('2d');
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, W, H);
+
+          drawSky(g, W, H, pal);
+          var view = makeView(world.camera || { position: [0, 5, -8], target: [0, 0, 0], fov: 55 }, W, H);
+          drawGrid(g, view, W, H, pal);
+          drawRoute(g, view, route, world.frame || 0, pal);
+
+          var entities = world.entities || [];
+          var courier = null,
+            drone = null,
+            gates = [];
+          for (var i = 0; i < entities.length; i++) {
+            var e = entities[i];
+            var role = (e.state && e.state.role) || '';
+            if (e.id === 'entity_courier' || role === 'courier') courier = e;
+            else if (e.id === 'entity_drone' || role === 'drone') drone = e;
+            else if (role === 'gate') gates.push(e);
+          }
+          // depth sort (far first) so nearer marks occlude far ones consistently
+          gates.sort(function (a, b) {
+            var za = view.project(a.transform.position),
+              zb = view.project(b.transform.position);
+            return (zb ? zb.z : -1) - (za ? za.z : -1);
+          });
+          if (courier) drawCourier(g, view, courier, route, pal, W, H);
+          for (var k = 0; k < gates.length; k++) drawGate(g, view, gates[k], pal);
+          if (drone) drawDrone(g, view, drone, courier, pal);
+
+          // subtle vignette
+          g.save();
+          var vg = g.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
+          vg.addColorStop(0, 'rgba(0,0,0,0)');
+          vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+          g.fillStyle = vg;
+          g.fillRect(0, 0, W, H);
+          g.restore();
+
+          drawHud(g, W, H, world, params);
+        }
+
+        // --- public contract -------------------------------------------------------
+        window.viscraft = {
+          reset: function () {},
+          render: function (ctx) {
+            var world = (typeof window !== 'undefined' && window.__viscraftWorld) || null;
+            var params = (ctx && ctx.params) || {};
+            var frames = (world && world.frames) || params.worldFrames || 240;
+            if (!world) {
+              if (params.preview !== true)
+                throw new Error('World renderer requires a runtime World snapshot; preview must be explicitly enabled');
+              world = previewWorld(params, (ctx && ctx.frame) || 0, frames);
+            }
+            requestSprites(ctx && ctx.bindings);
+            var pending = [];
+            for (var id in sprites) if (sprites[id] && sprites[id].promise) pending.push(sprites[id].promise);
+            if (pending.length) {
+              // Declared asset failures reject the render; capture bounds readiness.
+              return Promise.all(pending).then(function () {
+                for (var k in sprites) if (sprites[k]) sprites[k].promise = null;
+                draw(ctx, world);
+              });
+            }
+            draw(ctx, world);
+            return undefined;
+          },
+          dispose: function () {},
+        };
+      })();
+    </script>
+  </body>
+</html>

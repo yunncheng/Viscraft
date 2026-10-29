@@ -1,0 +1,11 @@
+{
+  "take":"take-baf4a51d7566a09eaa7aa3653b28005ba2e53206",
+  "artifact":"artifact-ea105ab448983c5f70dc0cd6391a9ead2766c518",
+  "actualFrames":209,
+  "simulated":false,
+  "observed":"Nine sampled seconds plus a six-cell stop/flock strip inspected from actual media; no real-time full playback or listening",
+  "retained":"Village facades/tower, cream sails and the same type of stone harbour pier remain in the opening and left background. The shot opens from beachside toward the sea, leaving the stonework at left.",
+  "performance":"The rider decelerates, a long webbed foot reaches the sand and supports the stopped bicycle, the head turns toward the sea and a natural-looking flock passes. The camera retreats to a small rider beside golden water.",
+  "continuityLimit":"The ending uses a closer beachside view at the cut, rather than an exactly repeated previous frame. Screen-side sunlight changes as the camera opens to the sea; the prompt alone is not evidence of exact camera or light preservation. Landmark correspondence is observed, not semantic reconstruction or pixel identity.",
+  "audio":"Original generated audio retained but not listened to; the final edit reuses the shared original composed score/foley."
+}

@@ -1,0 +1,6 @@
+# Keep source and recorded asset hashes stable across Git checkouts.
+* text=auto eol=lf
+# Project assets and upstream records retain their authoritative original bytes.
+skills/** -text
+tests/fixtures/** -text
+src/workbench/ui/vendor/** -text

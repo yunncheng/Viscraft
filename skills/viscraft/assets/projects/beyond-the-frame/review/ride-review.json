@@ -1,0 +1,11 @@
+{
+  "take":"take-8f74db1ea873a200f2f5f688e92d18cb468b2ffd",
+  "artifact":"artifact-3b4735e9b220b584eb0cf1fe90d96d8f2e153f2e",
+  "actualFrames":209,
+  "simulated":false,
+  "observation":"Actual nine sampled seconds and a four-cell opening strip were visually inspected; continuous real-time watching was not available",
+  "retainedAtOpening":["limestone parapet at same height","same village facade arrangement and tower","sailboats and harbour waterline","mountain ridge","right-facing white pelican and teal bicycle"],
+  "passage":"The first several seconds retain the harbour scene. Later samples show forward travel toward a parapet terminus/descending path, followed by the adjoining cove and damp sand; the village recedes through camera movement rather than disappearing at the paper cut.",
+  "endingState":"Open cove with low stonework/pier remaining left, headland beyond, rider still moving on sand; warm light from left, sea looks bluer as camera faces away from the sun.",
+  "limitations":"Reference conditioning does not establish exact geometry/pose in every frame; fine feather/limb deformation and continuous performance remain limited by sampled review. Not site reconstruction or footage captured in a physical harbour."
+}

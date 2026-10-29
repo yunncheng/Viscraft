@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Viscraft · type-chart scene</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f7f6f2; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<script type="module">
+/*
+ * Viscraft CodeScene: "type-chart" — a mixed CJK+Latin type layout over a
+ * small data chart, drawn entirely through ./type-chart.mjs.
+ *
+ * Contract: window.viscraft.render(ctx) is called once per frame and is a PURE
+ * function of (frame, time, seed, params, width, height). The module measures,
+ * breaks and aligns the title (CJK per glyph, Latin per word), then reveals the
+ * chart in stages — grid, then bars from the zero baseline, then a line to a
+ * moving head, then one annotation — all driven by
+ * `revealProgress(frame, {frames: revealFrames})`, never by wall-clock time.
+ *
+ * No network, no bundled fonts, no GSAP, no Date/Math.random. The font is a
+ * generic system family taken from `params.fontFamily` (default 'sans-serif').
+ *
+ * params (all optional; merged over the module's DEFAULTS via normalizeParams):
+ *   text         the headline (mixed CJK + Latin by default)
+ *   subtitle     the unit / method line under the title
+ *   source       the source note (bottom-left)
+ *   badge        the bottom-right badge ('' to hide)
+ *   fontFamily   generic family name resolved by the host system
+ *   fontWeight   numeric weight for the headline
+ *   layout       'chart' (headline + data chart) | 'type' (typographic card)
+ *   chart        { values[], labels[], unit, yMin, yMax, tickCount, highlight }
+ *   revealFrames integer frame length the reveal maps onto
+ *   startFrame   integer frame the reveal starts
+ *   palette      colour overrides (bg, ink, rule, grid, bar, line, ...)
+ */
+import { DEFAULT_PARAMS, normalizeParams, renderTypeChart } from './type-chart.mjs';
+
+const canvas = document.getElementById('stage');
+
+/** Merge the Source's params over the module DEFAULTS, then validate. */
+function resolveParams(params) {
+  return normalizeParams({ ...DEFAULT_PARAMS, ...(params ?? {}) });
+}
+
+function render(ctx = {}) {
+  const width = Math.max(8, Math.floor(ctx.width ?? canvas.width ?? 640));
+  const height = Math.max(8, Math.floor(ctx.height ?? canvas.height ?? 360));
+  canvas.width = width;
+  canvas.height = height;
+  const params = resolveParams(ctx.params);
+  const result = renderTypeChart(canvas, { ...ctx, width, height, params });
+  // Exposed for verification/authoring convenience; the pixels are the contract.
+  window.typeChartState = { ...result, width, height, text: params.text };
+  return result;
+}
+
+window.viscraft = { render };
+render({ frame: 0, fps: 24, width: canvas.width, height: canvas.height });
+</script>
+</body>
+</html>

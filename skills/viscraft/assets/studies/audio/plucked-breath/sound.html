@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>plucked-breath — code-authored sound scene</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0d1014;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      // Sound contract: window.viscraftSound.render(args) is called exactly once
+      // and must return exactly `channels` arrays of exactly `samples` samples,
+      // where `samples` is the Source's native per-channel span. All composition
+      // and synthesis lives in ./score.mjs; this page only wires the contract
+      // and keeps the last measured report for inspection.
+      import { buildScore, renderScore, scoreReport } from './score.mjs';
+
+      window.viscraftSound = {
+        async render({ sampleRate, channels, samples, params, seed }) {
+          const score = buildScore(params);
+          const rendered = renderScore({ sampleRate, channels, frames: samples, params, seed });
+          // A measured fact, not an acceptance: length, peak, per-section RMS,
+          // the exact-zero rest and the cue list. Never part of the return value.
+          window.viscraftSound.report = scoreReport(rendered.channels, sampleRate, score);
+          return { channels: rendered.channels };
+        },
+        dispose() {
+          window.viscraftSound.report = undefined;
+        },
+      };
+    </script>
+  </body>
+</html>

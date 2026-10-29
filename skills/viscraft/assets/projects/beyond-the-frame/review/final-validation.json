@@ -1,0 +1,53 @@
+{
+  "build": "build-74b2cdcb-ca10-4e8f-b73d-0fb6fc009910",
+  "artifact": "artifact-8f656b9e891a47c9e46e6365df901f53f8bb99aa",
+  "path": ".viscraft/artifacts/artifact-8f656b9e891a47c9e46e6365df901f53f8bb99aa.mp4",
+  "simulated": false,
+  "probe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 1344,
+        "height": 768,
+        "r_frame_rate": "24/1",
+        "nb_frames": "600"
+      },
+      {
+        "codec_name": "aac",
+        "sample_rate": "48000",
+        "channels": 2,
+        "r_frame_rate": "0/0",
+        "nb_frames": "1173"
+      }
+    ],
+    "format": {
+      "duration": "25.000000",
+      "size": "17146662"
+    }
+  },
+  "frames": 600,
+  "exactRepeatedAdjacent": 0,
+  "conformance": {
+    "framesMatch": true,
+    "fpsMatch": true,
+    "widthMatch": true,
+    "heightMatch": true,
+    "audioMatch": true
+  },
+  "loudness": {
+    "available": true,
+    "integratedLufs": -17.8,
+    "truePeakDbfs": -2.4
+  },
+  "diagnostics": [],
+  "clipSamples": [
+    {
+      "id": "original-score",
+      "usedSamples": 1200000,
+      "truncated": false
+    }
+  ],
+  "completeDecode": true,
+  "observations": "Actual final grid and review strips must be opened; technical facts do not imply real-time watching or listening."
+}

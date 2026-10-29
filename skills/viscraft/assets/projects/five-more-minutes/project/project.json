@@ -1,0 +1,518 @@
+{
+  "schemaVersion": 1,
+  "id": "five-more-minutes-reference",
+  "revision": 1,
+  "title": "再等五分钟 · 总想拖延的云",
+  "direction": {
+    "intent": "原创60秒温暖治愈童话漫画。小云拖延下雨，借数羊与整理彩虹掩饰恐惧；捧空杯的花让它勇于落下第一滴。11个具有动作表演的镜头，24fps交付，表情与铅笔线条按12fps重绘；纸张、水彩颗粒、柔和边缘与石墨轮廓。原创室内玩具乐队配乐，第一滴前留白，高潮为雨中圆舞曲。全部本地代码真实渲染，不用模拟后端，不调用云服务。",
+    "looks": [
+      {
+        "id": "watercolor",
+        "description": "Cream cotton paper, dusty blue watercolor sky, sage and ochre hills, coral scarf identity; two-pass graphite contours, pigment granulation, twelve drawings per second. Storybook asymmetry and expressive squash/stretch."
+      }
+    ],
+    "transitions": []
+  },
+  "assets": [
+    {
+      "id": "storybook_font",
+      "revision": 1,
+      "type": "font",
+      "path": "assets/fonts/NotoSansSC-VF.woff2",
+      "sha256": "aef8c34277afad81ecd0227138a830263c0caea65b7aea66d1195395f097b55a",
+      "simulated": false,
+      "rights": {
+        "origin": "Noto Sans SC variable font, google/fonts@47d54ca1ebb14fd864695f1d39dc734f39017c33; lossless WOFF2 recompression, fontTools 4.65.0.",
+        "license": "OFL-1.1",
+        "redistributable": true,
+        "attributionRequired": true,
+        "author": "The Noto Project Authors; Copyright 2014-2021 Adobe",
+        "licenseUrl": "https://scripts.sil.org/OFL",
+        "notice": "Reserved Font Name 'Source'. Full licence: assets/fonts/OFL-NotoSansSC.txt.",
+        "modifications": "Lossless WOFF2 recompression; no subsetting, outline or metric changes."
+      }
+    }
+  ],
+  "bindings": {},
+  "sources": [
+    {
+      "id": "cloud_01",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 0,
+        "start": 0
+      },
+      "seed": 20261020,
+      "frames": 120
+    },
+    {
+      "id": "cloud_02",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 1,
+        "start": 5
+      },
+      "seed": 20261020,
+      "frames": 144
+    },
+    {
+      "id": "cloud_03",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 2,
+        "start": 11
+      },
+      "seed": 20261020,
+      "frames": 96
+    },
+    {
+      "id": "cloud_04",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 3,
+        "start": 15
+      },
+      "seed": 20261020,
+      "frames": 96
+    },
+    {
+      "id": "cloud_05",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 4,
+        "start": 19
+      },
+      "seed": 20261020,
+      "frames": 144
+    },
+    {
+      "id": "cloud_06",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 5,
+        "start": 25
+      },
+      "seed": 20261020,
+      "frames": 144
+    },
+    {
+      "id": "cloud_07",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 6,
+        "start": 31
+      },
+      "seed": 20261020,
+      "frames": 120
+    },
+    {
+      "id": "cloud_08",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/courage.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2",
+        "author/courage.js"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 7,
+        "start": 36
+      },
+      "seed": 20261020,
+      "frames": 96
+    },
+    {
+      "id": "cloud_09",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 8,
+        "start": 40
+      },
+      "seed": 20261020,
+      "frames": 96
+    },
+    {
+      "id": "cloud_10",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 9,
+        "start": 44
+      },
+      "seed": 20261020,
+      "frames": 216
+    },
+    {
+      "id": "cloud_11",
+      "kind": "browser",
+      "output": "picture",
+      "entry": "author/film.html",
+      "resources": [
+        "author/film.js",
+        "assets/fonts/NotoSansSC-VF.woff2"
+      ],
+      "bindings": [],
+      "params": {
+        "scene": 10,
+        "start": 53
+      },
+      "seed": 20261020,
+      "frames": 168
+    },
+    {
+      "id": "original_score_and_foley",
+      "kind": "browser",
+      "output": "sound",
+      "entry": "author/sound.html",
+      "resources": [
+        "author/score.js"
+      ],
+      "bindings": [],
+      "params": {},
+      "seed": 1020,
+      "durationSamples": 2880000,
+      "sampleRate": 48000
+    }
+  ],
+  "composition": {
+    "output": {
+      "width": 1920,
+      "height": 1080,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "sampleRate": 48000,
+      "channels": 2
+    },
+    "scenes": [
+      {
+        "id": "scene_0",
+        "description": "再等五分钟"
+      },
+      {
+        "id": "scene_1",
+        "description": "今日待办"
+      },
+      {
+        "id": "scene_2",
+        "description": "先数羊"
+      },
+      {
+        "id": "scene_3",
+        "description": "整理彩虹"
+      },
+      {
+        "id": "scene_4",
+        "description": "第一滴恐惧"
+      },
+      {
+        "id": "scene_5",
+        "description": "花的小杯子"
+      },
+      {
+        "id": "scene_6",
+        "description": "从一滴开始"
+      },
+      {
+        "id": "scene_7",
+        "description": "深呼吸"
+      },
+      {
+        "id": "scene_8",
+        "description": "第一滴落下"
+      },
+      {
+        "id": "scene_9",
+        "description": "雨中圆舞曲"
+      },
+      {
+        "id": "scene_10",
+        "description": "今天就今天"
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot_0",
+        "scene": "scene_0",
+        "look": "watercolor",
+        "intent": "田园远景，睡着的云与片名同框。鸟掠过，云呼吸。",
+        "targetFrames": 120
+      },
+      {
+        "id": "shot_1",
+        "scene": "scene_1",
+        "look": "watercolor",
+        "intent": "闹钟响，云醒来，把今日下雨划成明天。",
+        "targetFrames": 144
+      },
+      {
+        "id": "shot_2",
+        "scene": "scene_2",
+        "look": "watercolor",
+        "intent": "想象中的三只羊跳过云，云认真数数。",
+        "targetFrames": 96
+      },
+      {
+        "id": "shot_3",
+        "scene": "scene_3",
+        "look": "watercolor",
+        "intent": "云伸手把彩虹系上蝴蝶结，忙碌而没有落雨。",
+        "targetFrames": 96
+      },
+      {
+        "id": "shot_4",
+        "scene": "scene_4",
+        "look": "watercolor",
+        "intent": "云捧着拟人雨滴，因害怕而回缩。",
+        "targetFrames": 144
+      },
+      {
+        "id": "shot_5",
+        "scene": "scene_5",
+        "look": "watercolor",
+        "intent": "低头看见捧空杯的垂首小花；小花只求一滴。",
+        "targetFrames": 144
+      },
+      {
+        "id": "shot_6",
+        "scene": "scene_6",
+        "look": "watercolor",
+        "intent": "云的神情从担心变成温柔，将清单折成纸飞机放飞。",
+        "targetFrames": 120
+      },
+      {
+        "id": "shot_7",
+        "scene": "scene_7",
+        "look": "watercolor",
+        "intent": "云吸气、变形，张开手，让雨滴离开。",
+        "targetFrames": 96
+      },
+      {
+        "id": "shot_8",
+        "scene": "scene_8",
+        "look": "watercolor",
+        "intent": "微距跟随雨滴，落入花杯，细小飞溅与涟漪。",
+        "targetFrames": 96
+      },
+      {
+        "id": "shot_9",
+        "scene": "scene_9",
+        "look": "watercolor",
+        "intent": "云欢快降雨，花朵抬头，蜗牛撑叶伞。",
+        "targetFrames": 216
+      },
+      {
+        "id": "shot_10",
+        "scene": "scene_10",
+        "look": "watercolor",
+        "intent": "拉回温暖的彩虹田园；小云从打盹醒来，选择今天开始。",
+        "targetFrames": 168
+      }
+    ],
+    "placements": [
+      {
+        "id": "place_0",
+        "shot": "shot_0",
+        "source": "cloud_01",
+        "inFrame": 0,
+        "outFrame": 120,
+        "startFrame": 0,
+        "audio": "mute"
+      },
+      {
+        "id": "place_1",
+        "shot": "shot_1",
+        "source": "cloud_02",
+        "inFrame": 0,
+        "outFrame": 144,
+        "startFrame": 120,
+        "audio": "mute"
+      },
+      {
+        "id": "place_2",
+        "shot": "shot_2",
+        "source": "cloud_03",
+        "inFrame": 0,
+        "outFrame": 96,
+        "startFrame": 264,
+        "audio": "mute"
+      },
+      {
+        "id": "place_3",
+        "shot": "shot_3",
+        "source": "cloud_04",
+        "inFrame": 0,
+        "outFrame": 96,
+        "startFrame": 360,
+        "audio": "mute"
+      },
+      {
+        "id": "place_4",
+        "shot": "shot_4",
+        "source": "cloud_05",
+        "inFrame": 0,
+        "outFrame": 144,
+        "startFrame": 456,
+        "audio": "mute"
+      },
+      {
+        "id": "place_5",
+        "shot": "shot_5",
+        "source": "cloud_06",
+        "inFrame": 0,
+        "outFrame": 144,
+        "startFrame": 600,
+        "audio": "mute"
+      },
+      {
+        "id": "place_6",
+        "shot": "shot_6",
+        "source": "cloud_07",
+        "inFrame": 0,
+        "outFrame": 120,
+        "startFrame": 744,
+        "audio": "mute"
+      },
+      {
+        "id": "place_7",
+        "shot": "shot_7",
+        "source": "cloud_08",
+        "inFrame": 0,
+        "outFrame": 96,
+        "startFrame": 864,
+        "audio": "mute"
+      },
+      {
+        "id": "place_8",
+        "shot": "shot_8",
+        "source": "cloud_09",
+        "inFrame": 0,
+        "outFrame": 96,
+        "startFrame": 960,
+        "audio": "mute"
+      },
+      {
+        "id": "place_9",
+        "shot": "shot_9",
+        "source": "cloud_10",
+        "inFrame": 0,
+        "outFrame": 216,
+        "startFrame": 1056,
+        "audio": "mute"
+      },
+      {
+        "id": "place_10",
+        "shot": "shot_10",
+        "source": "cloud_11",
+        "inFrame": 0,
+        "outFrame": 168,
+        "startFrame": 1272,
+        "audio": "mute"
+      }
+    ],
+    "transitions": [],
+    "audio": [
+      {
+        "id": "soundtrack",
+        "kind": "source",
+        "source": "original_score_and_foley",
+        "startSample": 0,
+        "gain": 1,
+        "fadeInSamples": 12000,
+        "fadeOutSamples": 14400,
+        "bus": "music_and_foley"
+      }
+    ],
+    "mastering": {
+      "targetLufs": -17,
+      "truePeakDbfs": -2
+    },
+    "outputFrames": 1440
+  },
+  "imageDocuments": [],
+  "imageTargets": [],
+  "handoff": [
+    {
+      "path": "author/NOTES.md",
+      "role": "notes"
+    },
+    {
+      "path": "LICENSES.md",
+      "role": "license"
+    },
+    {
+      "path": "LICENSE-Apache-2.0.txt",
+      "role": "license"
+    },
+    {
+      "path": "assets/fonts/OFL-NotoSansSC.txt",
+      "role": "license"
+    }
+  ],
+  "soundTargets": []
+}

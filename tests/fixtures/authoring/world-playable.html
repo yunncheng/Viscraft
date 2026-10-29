@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Signal Run — steer the shared World</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #04060d;
+        color: white;
+        font: 14px sans-serif;
+      }
+      iframe {
+        display: block;
+        border: 0;
+        width: 100vw;
+        height: 100vh;
+      }
+      #hud {
+        position: absolute;
+        top: 30px;
+        left: 12px;
+        padding: 8px;
+        background: #081524cc;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe id="view" src="world.html" title="Shared World renderer"></iframe>
+    <div id="hud"></div>
+    <script type="module">
+      import { sampleWorld } from './world-state.js';
+      const iframe = document.getElementById('view'),
+        hud = document.getElementById('hud');
+      let definition,
+        renderer,
+        bindings = {},
+        params = {},
+        current,
+        lastFrame = -1,
+        progress = -1,
+        x = 0,
+        z = 0,
+        score = 0;
+      const keys = new Set(),
+        passed = new Set();
+      addEventListener('keydown', event => {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(event.key)) {
+          event.preventDefault();
+          keys.add(event.key);
+        }
+        if (event.key.toLowerCase() === 'r') {
+          progress = -1;
+          x = 0;
+          z = 0;
+          score = 0;
+          passed.clear();
+        }
+      });
+      addEventListener('keyup', event => keys.delete(event.key));
+      function reset() {
+        lastFrame = -1;
+        progress = -1;
+        x = 0;
+        z = 0;
+        score = 0;
+        passed.clear();
+        keys.clear();
+        current = null;
+      }
+      async function ready() {
+        if (!iframe.contentWindow.viscraft)
+          await new Promise(resolve => iframe.addEventListener('load', resolve, { once: true }));
+        renderer = iframe.contentWindow.viscraft;
+        if (!renderer) throw Error('Shared World renderer did not load');
+        if (window.__viscraftWorldDefinition) {
+          definition = window.__viscraftWorldDefinition;
+          return;
+        }
+        const project = await fetch('project.json').then(response => {
+          if (!response.ok) throw Error('Cannot load authoritative Project');
+          return response.json();
+        });
+        const source = project.sources.find(source => source.entry === 'world-playable.html' && source.world);
+        if (!source) throw Error('No World-bound interactive Source');
+        const world = project.worlds.find(world => world.id === source.world.id);
+        definition = { ...world, cameras: world.cameras.filter(camera => camera.id === source.world.camera) };
+        params = source.params;
+        const scoped = new Map();
+        for (const name of source.bindings) {
+          const original = project.bindings[name];
+          const id = source.bindingOverrides?.[name] ?? original;
+          const asset = project.assets.find(asset => asset.id === id);
+          bindings[name] = { id: asset.id, url: new URL(asset.path, location.href).href, sha256: asset.sha256 };
+          scoped.set(original, id);
+        }
+        definition.entities = definition.entities.map(entity => ({
+          ...entity,
+          asset: scoped.get(entity.asset) ?? entity.asset,
+        }));
+      }
+      async function render(ctx) {
+        if (!definition) throw Error('Interactive World definition is not ready');
+        if (ctx.frame !== lastFrame + 1) throw Error('Interactive frames must advance sequentially');
+        lastFrame = ctx.frame;
+        const step = 1 / ctx.fps;
+        x += (Number(keys.has('ArrowRight')) - Number(keys.has('ArrowLeft'))) * 3 * step;
+        z += (Number(keys.has('ArrowDown')) - Number(keys.has('ArrowUp'))) * 3 * step;
+        progress = Math.min(definition.frames - 1, progress + (keys.has(' ') ? 2 : 1));
+        // Session offsets are input-driven play state, not another persisted World.
+        // The shared sampler evaluates the same authored trajectory and camera facts.
+        const session = structuredClone(definition);
+        const courier = session.entities.find(entity => entity.state.role === 'courier');
+        courier.transform.position[0] += x;
+        courier.transform.position[2] += z;
+        for (const trajectory of session.trajectories.filter(trajectory => trajectory.entity === courier.id))
+          for (const key of trajectory.keyframes) {
+            key.position[0] += x;
+            key.position[2] += z;
+          }
+        const snapshot = sampleWorld(session, session.cameras[0].id, progress);
+        const body = snapshot.entities.find(entity => entity.id === courier.id);
+        const hits = [];
+        for (const gate of snapshot.entities.filter(entity => entity.state.role === 'gate')) {
+          const distance = Math.hypot(
+            ...gate.transform.position.map((value, index) => value - body.transform.position[index]),
+          );
+          if (distance < 1.8 && !passed.has(gate.id)) {
+            passed.add(gate.id);
+            score++;
+            hits.push(gate.id);
+          }
+        }
+        current = {
+          world: definition.id,
+          revision: definition.revision,
+          localFrame: ctx.frame,
+          worldFrame: progress,
+          offset: [x, z],
+          position: body.transform.position,
+          score,
+          gateEvents: hits,
+          camera: snapshot.camera.id,
+        };
+        iframe.contentWindow.__viscraftWorld = snapshot;
+        iframe.width = ctx.width;
+        iframe.height = ctx.height;
+        iframe.style.width = ctx.width + 'px';
+        iframe.style.height = ctx.height + 'px';
+        await renderer.render({ ...ctx, params: ctx.params, bindings: ctx.bindings });
+        hud.textContent = `SIGNAL RUN | gates ${score}/3 | world ${progress}/${definition.frames - 1} | arrows steer · Space boost · R restart`;
+      }
+      window.viscraft = { ready, reset, render, state: () => current, dispose: () => renderer?.dispose?.() };
+      // Only live mode uses a wall-clock loop. Offline capture drives the same fixed
+      // steps from reset with real input events and records every resulting state.
+      if (!window.__viscraftWorldDefinition) {
+        await ready();
+        reset();
+        let accumulator = 0,
+          previous = performance.now(),
+          frame = 0;
+        async function live(now) {
+          accumulator += Math.min(0.1, (now - previous) / 1000);
+          previous = now;
+          while (accumulator >= 1 / 30) {
+            await render({
+              frame: frame++,
+              time: frame / 30,
+              fps: 30,
+              width: 640,
+              height: 360,
+              seed: 0,
+              params,
+              bindings,
+            });
+            accumulator -= 1 / 30;
+          }
+          requestAnimationFrame(live);
+        }
+        requestAnimationFrame(live);
+      }
+    </script>
+  </body>
+</html>

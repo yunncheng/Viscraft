@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cel watercolour — cel + wash CodeScene entry</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f1e9da}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body>
+<canvas id="cel-watercolor"></canvas>
+<script type="module">
+// Entry contract: window.viscraft.render(ctx) is called once per frame.
+// All Look / paint-stack / reveal logic lives in ./cel-watercolor.mjs so the
+// module is reusable; this page only wires the canvas to the contract.
+import { renderCelWatercolor } from './cel-watercolor.mjs';
+window.viscraft = {
+  render(ctx) {
+    renderCelWatercolor(document.getElementById('cel-watercolor'), ctx);
+  },
+};
+</script>
+</body></html>

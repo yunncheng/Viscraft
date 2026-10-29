@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>RISOGRAPH RIDE — Foley scene</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      // Sound contract: window.viscraftSound.render(args) is called exactly once
+      // and must return exactly `channels` arrays of exactly `samples` samples,
+      // where `samples` is the Source's native per-channel span. This entry
+      // imports only the Foley module; the picture and the music Source have
+      // separate resources, so editing Foley cannot re-render the picture or the
+      // music.
+      import { renderFoley } from './foley.mjs';
+
+      window.viscraftSound = {
+        render({ sampleRate, channels, samples, params, seed }) {
+          const result = renderFoley({ sampleRate, channels, frames: samples, params, seed });
+          window.viscraftSound.report = result.report;
+          return { channels: result.channels };
+        },
+        dispose() {
+          delete window.viscraftSound.report;
+        },
+      };
+    </script>
+  </body>
+</html>

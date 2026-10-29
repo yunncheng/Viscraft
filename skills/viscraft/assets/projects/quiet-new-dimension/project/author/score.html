@@ -1,0 +1,21 @@
+<!doctype html><meta charset="UTF-8"><script>
+// Original sparse electronic score. One clock drives every entry, rest and tail.
+window.viscraftSound={render:async({sampleRate,channels,samples,seed})=>{
+ const ctx=new OfflineAudioContext(channels,samples,sampleRate),master=ctx.createGain();master.gain.value=.68;master.connect(ctx.destination);
+ function tone(freq,start,duration,level,pan=0,bright=false){const o=ctx.createOscillator(),a=ctx.createGain(),p=ctx.createStereoPanner();o.type=bright?'triangle':'sine';o.frequency.value=freq;p.pan.value=pan;o.connect(a);a.connect(p);p.connect(master);a.gain.setValueAtTime(0,start);a.gain.linearRampToValueAtTime(level,start+Math.min(.15,duration*.2));a.gain.exponentialRampToValueAtTime(.00001,start+duration);o.start(start);o.stop(start+duration);}
+ function breath(start,duration,level,from,to,pan=0){const b=ctx.createBuffer(1,Math.ceil(duration*sampleRate),sampleRate),v=b.getChannelData(0);let state=seed+Math.round(start*100);for(let i=0;i<v.length;i++){state=(1664525*state+1013904223)>>>0;v[i]=(state/4294967296*2-1)}const n=ctx.createBufferSource(),f=ctx.createBiquadFilter(),a=ctx.createGain(),p=ctx.createStereoPanner();n.buffer=b;f.type='bandpass';f.Q.value=.7;f.frequency.setValueAtTime(from,start);f.frequency.exponentialRampToValueAtTime(to,start+duration);a.gain.setValueAtTime(0,start);a.gain.linearRampToValueAtTime(level,start+duration*.7);a.gain.exponentialRampToValueAtTime(.00001,start+duration);p.pan.setValueAtTime(pan,start);p.pan.linearRampToValueAtTime(-pan,start+duration);n.connect(f);f.connect(a);a.connect(p);p.connect(master);n.start(start);n.stop(start+duration);}
+ // 0–1.9 s absolute silence. A low resonance wakes with the light.
+ tone(73.416,2,5.6,.16);tone(110,4.1,4.9,.055,-.3);breath(3.4,2.7,.027,550,2300,-.5);
+ [6.1,7.5,9.2].forEach((t,i)=>{tone([880,1100,1320][i],t,.7,.035,i%2?.4:-.4);tone(220,t,1.4,.025)});
+ // Floating objects: a restrained D–A–E motif, no drum loop.
+ tone(73.416,10,6.7,.13);tone(146.832,10.06,4,.07,-.3);tone(220,12,3.7,.055,.25);tone(329.628,14,3.3,.045,-.15);
+ breath(15.7,2.4,.12,140,4200,-.6);
+ // Portal at 18 s: low impact plus wide thin harmonic field.
+ tone(36.708,18,3.1,.25);tone(73.416,18.04,5.7,.17);tone(293.665,18.1,5.7,.06,-.55);tone(440,18.2,5.4,.05,.55);breath(18,1.2,.07,3200,350,.65);
+ [19.2,20,20.8,21.6,22.4,23.2].forEach((t,i)=>tone([587.33,880,659.255,880,587.33,440][i],t,1.2,.025,(i%2?1:-1)*.6));
+ // Tails end by 25.5, followed by a full rest before the signature.
+ tone(146.832,24,1.45,.09);tone(220,24.05,1.4,.04,.2);
+ tone(293.665,26.45,2.75,.07,-.2);tone(440,26.52,2.65,.045,.2);tone(73.416,26.45,2.75,.09);
+ const b=await ctx.startRendering();return {channels:Array.from({length:channels},(_,c)=>b.getChannelData(c))};
+}};
+</script>

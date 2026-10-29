@@ -1,0 +1,9 @@
+{
+  "format": "viscraft-runtime-distribution/1",
+  "name": "viscraft-runtime",
+  "version": "0.1.0",
+  "file": "viscraft-runtime-0.1.0.tgz",
+  "sha256": "03bd943baaa94e75346a2867ac4f3d38d5707834871510551524681a0030a64c",
+  "contentSha256": "6c9d4f18d5c88d8d819daa3f9cba80af549b4b9b0914af40d70c1952aee6f827",
+  "url": "https://github.com/yunncheng/Viscraft/releases/download/v0.1.0/viscraft-runtime-0.1.0.tgz"
+}

@@ -1,0 +1,190 @@
+{
+  "work": "再等五分钟 / Five More Minutes",
+  "origin": "Original production of Five More Minutes, retained as a complete-work reference for the Viscraft Skill.",
+  "originalBuild": "build-673b8684-3c80-4c85-9b46-7964b385ecd3",
+  "originalProject": {
+    "id": "project-64fc229ef14fdc41",
+    "revision": 3,
+    "sha256": "6df7a371ad6a44d5bd5ac4087270bf8268e8ee4864dda9951891895badc688de"
+  },
+  "originalSnapshotHash": "cd638df5c4f38105f4b3416c08d16ebb34e52b0712622bd2e87581a796596f14",
+  "originalEnvironment": {
+    "runtime": "viscraft-runtime-0.1.0-build-1",
+    "node": "v24.20.0",
+    "platform": "linux/x64",
+    "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+    "ffprobe": "ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers",
+    "browser": "Google Chrome for Testing 154.0.8037.57",
+    "implementation": "0c7f2fa1ef19b22a791246edd477f79f57b3d07038f3c792c6ab2f3c4d6e8d6e"
+  },
+  "originalInputs": {
+    "author/film.html": "d4dca648140c6f3cd54229b312918e346e4f86b1b10ba91a2b968f38d616e34e",
+    "author/film.js": "75f32dfd1c13985e35335a235aa56b9fac15c391b336dbd63696d02381889bb0",
+    "assets/fonts/NotoSansSC-VF.woff2": "aef8c34277afad81ecd0227138a830263c0caea65b7aea66d1195395f097b55a",
+    "author/courage.html": "ad2c4a80c86335413dd0bd45d93432b18c464ac98ea327e2ea9ce50e49d5033e",
+    "author/courage.js": "5ec8484f4b061d4d3ce1584dc6565dcc32c8bc6ac06d3b5a40a562cb4dcc6dd4",
+    "author/sound.html": "27e0740c8d6c27e462bfb9911d650dfb45109d0b60b3476dfe578aca9f98cfab",
+    "author/score.js": "96f767400ce78a708772aedadc073d525cd0cafc4bb9a710af2dd003d8bd5342"
+  },
+  "fontLicenseSha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+  "preview": {
+    "sha256": "16c98537eb7addb6b0a5a158f0b76c57a12b1186f8639ae0a14e1790b18c797c",
+    "bytes": 18919673,
+    "width": 1920,
+    "height": 1080,
+    "frames": 1440,
+    "fps": "24/1",
+    "seconds": 60,
+    "sampleRate": 48000,
+    "channels": 2,
+    "simulated": false,
+    "path": "movie/final.mp4",
+    "method": "Rendered natively from the included author source, not upscaled from the original movie."
+  },
+  "refinement": {
+    "source": "cloud_08",
+    "intervalFrames": [
+      864,
+      960
+    ],
+    "beforeArtifact": "artifact-4dbc6917c6a0486354cf1ffeabef5028a1bf3fdc",
+    "beforeArtifactSha256": "fb369e7e5fe5943a04192d045bdd5db2966a3223dc002ee280a617de737fd54f",
+    "beforeShotFrame": 34,
+    "afterMovieFrame": 898,
+    "finalActionStripFrames": [
+      869,
+      898,
+      919,
+      955,
+      962,
+      986,
+      1000,
+      1013
+    ],
+    "description": "Hands meet the droplet before opening. Before and after stills use the same shot-local frame.",
+    "evidenceMovieSha256": "6c9a32d1e9e565dbeeb6cc2a9b56bcc9188df11977a381d0d4b67807d2a0626b"
+  },
+  "limits": "The record covers source, frozen input identities, final encoded stills and numerical audio facts; it does not establish full-motion or listening quality.",
+  "scope": "One current native-1080p movie with its editable author Project and review evidence. Not a portable export or active Result. Original production provenance and causal repair evidence are retained; the original full production remains outside this reference.",
+  "packagingAdaptations": [
+    {
+      "path": "project/author/score.js",
+      "originalSha256": "96f767400ce78a708772aedadc073d525cd0cafc4bb9a710af2dd003d8bd5342",
+      "sha256": "fb82e47e6ec1def02f4daca0d71081b5d7a7767f6f2196b9160fc9e2fd12f298",
+      "change": "Use the current samples render argument; synthesis and event timing unchanged."
+    },
+    {
+      "path": "project/author/film.js",
+      "originalSha256": "75f32dfd1c13985e35335a235aa56b9fac15c391b336dbd63696d02381889bb0",
+      "sha256": "a25ec4dd724e7588e8b4e0b6b73cc3eb413eb3b314ad3440cff1f044bb5d48c5",
+      "change": "Redraw vector paths, text and procedural paper at capture dimensions while retaining the logical 1280×720 stage and authored timing."
+    },
+    {
+      "path": "project/author/film.html",
+      "originalSha256": "d4dca648140c6f3cd54229b312918e346e4f86b1b10ba91a2b968f38d616e34e",
+      "sha256": "53a46bdfb8ffbbdaf782db66620c0c2b7c4d452618750ddb320dcaa91598df2c",
+      "change": "Set the initial canvas buffer to the current 1920×1080 authoring default; render context controls actual dimensions."
+    },
+    {
+      "path": "project/author/courage.html",
+      "originalSha256": "ad2c4a80c86335413dd0bd45d93432b18c464ac98ea327e2ea9ce50e49d5033e",
+      "sha256": "6691f2451c81b4572e90af2b7feb2e302fd9d7e7419c8b56c4f3bdd90debfa01",
+      "change": "Set the initial canvas buffer to the current 1920×1080 authoring default; preserve the specialized contact performance."
+    }
+  ],
+  "inputPathBase": "originalInputs paths are relative to project/; they identify original production bytes, before any listed packaging adaptations.",
+  "currentAuthoring": {
+    "output": {
+      "width": 1920,
+      "height": 1080,
+      "fps": "24/1",
+      "frames": 1440
+    },
+    "projectSha256": "6d6cc876ad9e5bb542685f7f5bb0137a2fa8abeef798cf26d0d3acec62526362"
+  },
+  "originalProductionMovie": {
+    "sha256": "6c9a32d1e9e565dbeeb6cc2a9b56bcc9188df11977a381d0d4b67807d2a0626b",
+    "bytes": 10599121,
+    "frames": 1440,
+    "fps": "24/1",
+    "seconds": 60,
+    "width": 1280,
+    "height": 720,
+    "sampleRate": 48000,
+    "channels": 2,
+    "simulated": false,
+    "reencoded": false
+  },
+  "render": {
+    "build": "build-e35e9db7-6056-4346-b3c6-b8ab68eba924",
+    "snapshotHash": "8fb5e1ec033f71f7e5ec0cf51a368649f8d3dd7f2aa53dc5f712c5c322c1405b",
+    "authorInputs": {
+      "author/film.html": "53a46bdfb8ffbbdaf782db66620c0c2b7c4d452618750ddb320dcaa91598df2c",
+      "author/film.js": "a25ec4dd724e7588e8b4e0b6b73cc3eb413eb3b314ad3440cff1f044bb5d48c5",
+      "assets/fonts/NotoSansSC-VF.woff2": "aef8c34277afad81ecd0227138a830263c0caea65b7aea66d1195395f097b55a",
+      "author/courage.html": "6691f2451c81b4572e90af2b7feb2e302fd9d7e7419c8b56c4f3bdd90debfa01",
+      "author/courage.js": "5ec8484f4b061d4d3ce1584dc6565dcc32c8bc6ac06d3b5a40a562cb4dcc6dd4",
+      "author/sound.html": "27e0740c8d6c27e462bfb9911d650dfb45109d0b60b3476dfe578aca9f98cfab",
+      "author/score.js": "fb82e47e6ec1def02f4daca0d71081b5d7a7767f6f2196b9160fc9e2fd12f298"
+    },
+    "technicalChecks": {
+      "decodedFrames": true,
+      "sourceHashesMatch": true,
+      "captureDiagnostics": []
+    },
+    "observation": "Source hashes, decoded output and sampled pictures checked; subjective listening and continuous-motion review not performed."
+  },
+  "review": {
+    "build": "build-e35e9db7-6056-4346-b3c6-b8ab68eba924",
+    "movieSha256": "16c98537eb7addb6b0a5a158f0b76c57a12b1186f8639ae0a14e1790b18c797c",
+    "reportSha256": "b6983d4a582a183d79c11f485604d0c8526f6bc0fe233f19b7db2739fb5d4429",
+    "contactSheetSha256": "9026c01fca9c31d2bb8ccab429682b01a9180b6e8f53fe0d07da80d7520e9555",
+    "seams": [
+      {
+        "path": "review/seams/seam-00.png",
+        "sha256": "f8b4e7193ec25e9cbea314992a521b0d679b549a32f9b9ec27f898f94ca68b85"
+      },
+      {
+        "path": "review/seams/seam-01.png",
+        "sha256": "5e3ed411468d67edf3d25758d17e14a5773cfde8a775350b2ec24eb55f839b02"
+      },
+      {
+        "path": "review/seams/seam-02.png",
+        "sha256": "3b0a6587de7dd9fb4b31659509e7286d33a5d830114524f20f3ca3ba8cb90714"
+      },
+      {
+        "path": "review/seams/seam-03.png",
+        "sha256": "bbf4b478e33775e2053b8f78b3bf23d8e365724e743b423362e7145d2d081958"
+      },
+      {
+        "path": "review/seams/seam-04.png",
+        "sha256": "3b9eab926e947de2c2c4660cd9ffe1d0c7cddeabe9b32634c9ae54ffed4e13a2"
+      },
+      {
+        "path": "review/seams/seam-05.png",
+        "sha256": "35f9cb55d749ce2438deaa7f515e359718b5c19316ce25578316de098390f3cd"
+      },
+      {
+        "path": "review/seams/seam-06.png",
+        "sha256": "bd3efcba8a9da5f352ae0ccf34e5972a2bcd0b28476f19690b02d10982b77fde"
+      },
+      {
+        "path": "review/seams/seam-07.png",
+        "sha256": "d5537a4308f1763d5a7f42b9bc31585a22455ae3c709c4f9959978d6327c9da7"
+      },
+      {
+        "path": "review/seams/seam-08.png",
+        "sha256": "071acba281610a2d574a708e190f8aebceccd866a25dcb8a2ace6468ace2606d"
+      },
+      {
+        "path": "review/seams/seam-09.png",
+        "sha256": "72da52c1b6d16429a67b90b3b3d1438c6cdbfbaacf46856f9e3f2df5e63b0349"
+      }
+    ]
+  },
+  "distributionLicense": {
+    "license": "Apache-2.0",
+    "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+    "scope": "Viscraft-owned code, documentation and case media; third-party material retains its stated terms. Original production provenance is unchanged."
+  }
+}

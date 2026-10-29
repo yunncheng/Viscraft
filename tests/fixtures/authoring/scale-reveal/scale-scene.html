@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Viscraft · scale-reveal scene</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #070b14; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="640" height="360"></canvas>
+<script type="module">
+/*
+ * Viscraft CodeScene: "scale-reveal" — a tiny world (a repeating ground grid,
+ * survey marks and two interchangeable subjects) drawn entirely through
+ * ./scale-reveal.mjs, the distributable screen-anchor scale-reveal camera.
+ *
+ * The camera holds `worldAnchor` on `anchorScreen` at every frame while the
+ * zoom is planned in log space. Every primitive is placed with `camera.project`,
+ * so the scene never hand-writes the world->screen mapping.
+ *
+ * Determinism: every pixel is a pure function of (frame, seed, params). The
+ * module is pure; marks use a seeded integer hash. No Date, no Math.random,
+ * no requestAnimationFrame.
+ *
+ * params (all optional; merged over DEFAULTS):
+ *   layout       'beacon' | 'pipeline'   second subject/layout for reuse
+ *   worldAnchor  { x, y }                the world point to hold
+ *   anchorScreen { x, y }                screen fraction in [0,1] to hold it at
+ *   zoom         { from, to }            linear zoom, planned in log space
+ *   ease         named curve             see SCALE_REVEAL_EASINGS
+ *   holdIn       integer frames          hold at the wide state
+ *   holdOut      integer frames          hold at the tight state
+ *   startFrame   integer                camera scope start on the comp clock
+ *   frames       integer                camera scope length (REQUIRED for holds)
+ *   bounds       {minX,minY,maxX,maxY}  optional clamp of the resolved centre
+ *   probe        boolean                measure the on-canvas anchor (default true)
+ */
+import { createScaleReveal, project, EASING_NAMES } from './scale-reveal.mjs';
+
+const WORLD = { width: 1600, height: 900 };
+const FIT = 'cover';
+
+const DEFAULTS = {
+  layout: 'beacon',
+  worldAnchor: { x: 520, y: 360 },
+  anchorScreen: { x: 0.62, y: 0.44 },
+  zoom: { from: 1, to: 16 },
+  ease: 'inOutCubic',
+  holdIn: 0,
+  holdOut: 0,
+  startFrame: 0,
+  frames: 1,
+  bounds: null,
+  probe: true,
+};
+
+const PALETTE = {
+  bg: '#070b14', grid: '#16223a', gridMajor: '#27406b', ink: '#dfe9ff',
+  mark: '#4dabf7', markAlt: '#ffd166', structure: '#8aa0c8', accent: '#7cf0ff',
+};
+const PROBE = { r: 255, g: 0, b: 255 };
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+
+function hash(seed, n) {
+  let h = (seed ^ (n * 0x9e3779b1)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+function merge(params) {
+  const layout = params.layout ?? DEFAULTS.layout;
+  const baseAnchor = layout === 'pipeline' ? { x: 1080, y: 520 } : DEFAULTS.worldAnchor;
+  const baseZoom = layout === 'pipeline' ? { from: 1.2, to: 20 } : DEFAULTS.zoom;
+  return {
+    ...DEFAULTS,
+    worldAnchor: baseAnchor,
+    zoom: baseZoom,
+    ...params,
+    frames: Number.isInteger(params.frames) && params.frames >= 1 ? params.frames : DEFAULTS.frames,
+  };
+}
+
+function buildCamera(params) {
+  return createScaleReveal({
+    worldFrame: WORLD,
+    fit: FIT,
+    viewport: { width: params.probeWidth, height: params.probeHeight },
+    worldAnchor: params.worldAnchor,
+    anchorScreen: params.anchorScreen,
+    zoom: params.zoom,
+    ease: EASING_NAMES.includes(params.ease) ? params.ease : DEFAULTS.ease,
+    holdIn: params.holdIn,
+    holdOut: params.holdOut,
+    startFrame: params.startFrame,
+    frames: params.frames,
+    bounds: params.bounds ?? null,
+  });
+}
+
+function line(ax, ay, bx, by) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); }
+
+function drawGrid(camera, sample, viewport) {
+  const step = 100;
+  const visible = camera.visibleWorldBounds(sample.frame, viewport);
+  const pad = step;
+  const x0 = Math.floor((visible.minX - pad) / step) * step;
+  const x1 = Math.ceil((visible.maxX + pad) / step) * step;
+  const y0 = Math.floor((visible.minY - pad) / step) * step;
+  const y1 = Math.ceil((visible.maxY + pad) / step) * step;
+  ctx.lineWidth = 1;
+  for (let x = x0; x <= x1; x += step) {
+    const a = project({ x, y: y0 }, sample, viewport);
+    const b = project({ x, y: y1 }, sample, viewport);
+    ctx.strokeStyle = x % 500 === 0 ? PALETTE.gridMajor : PALETTE.grid;
+    line(a.x, a.y, b.x, b.y);
+  }
+  for (let y = y0; y <= y1; y += step) {
+    const a = project({ x: x0, y }, sample, viewport);
+    const b = project({ x: x1, y }, sample, viewport);
+    ctx.strokeStyle = y % 500 === 0 ? PALETTE.gridMajor : PALETTE.grid;
+    line(a.x, a.y, b.x, b.y);
+  }
+}
+
+/** A ring of known-identifiable survey marks, seeded, reused on every layout. */
+function drawMarks(sample, viewport, seed) {
+  for (let i = 0; i < 14; i++) {
+    const x = 120 + hash(seed, i * 3 + 1) * (WORLD.width - 240);
+    const y = 120 + hash(seed, i * 3 + 2) * (WORLD.height - 240);
+    const radiusWorld = 6 + hash(seed, i * 3 + 3) * 10;
+    const p = project({ x, y }, sample, viewport);
+    const r = radiusWorld * sample.scale;
+    if (r < 0.6) continue;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = i % 2 ? PALETTE.mark : PALETTE.markAlt;
+    ctx.lineWidth = Math.max(1, r * 0.28);
+    ctx.stroke();
+  }
+}
+
+/** Subject 'beacon': a mast at the anchor with guy lines and a lamp. */
+function drawBeacon(sample, viewport, anchor) {
+  const base = project({ x: anchor.x, y: anchor.y + 60 / Math.max(sample.scale, 1e-6) }, sample, viewport);
+  const top = project({ x: anchor.x, y: anchor.y - 40 / Math.max(sample.scale, 1e-6) }, sample, viewport);
+  const p = project(anchor, sample, viewport);
+  const spread = 34 * Math.max(1, Math.min(sample.scale, 6));
+  ctx.strokeStyle = PALETTE.structure;
+  ctx.lineWidth = Math.max(1.5, Math.min(6, sample.scale * 3));
+  line(p.x, p.y, base.x, base.y);
+  line(p.x, p.y, top.x, top.y);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = PALETTE.accent;
+  line(base.x - spread, base.y, top.x, top.y);
+  line(base.x + spread, base.y, top.x, top.y);
+  ctx.beginPath();
+  ctx.arc(top.x, top.y, Math.max(2, 8 * Math.min(sample.scale, 3)), 0, Math.PI * 2);
+  ctx.fillStyle = PALETTE.accent;
+  ctx.fill();
+}
+
+/** Subject 'pipeline': a pipe junction with two valve wheels at the anchor. */
+function drawPipeline(sample, viewport, anchor) {
+  const p = project(anchor, sample, viewport);
+  const a = project({ x: anchor.x - 120, y: anchor.y }, sample, viewport);
+  const b = project({ x: anchor.x + 120, y: anchor.y }, sample, viewport);
+  const c = project({ x: anchor.x, y: anchor.y - 120 }, sample, viewport);
+  const w = Math.max(2, Math.min(10, 5 * sample.scale * 0.5));
+  ctx.strokeStyle = PALETTE.structure;
+  ctx.lineWidth = w;
+  line(a.x, a.y, p.x, p.y);
+  line(p.x, p.y, b.x, b.y);
+  line(p.x, p.y, c.x, c.y);
+  for (const [dx, dy] of [[-120, 0], [120, 0], [0, -120]]) {
+    const q = project({ x: anchor.x + dx, y: anchor.y + dy }, sample, viewport);
+    ctx.strokeStyle = PALETTE.markAlt;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, Math.max(3, 14 * Math.min(sample.scale, 4)), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function render({ frame = 0, width = 640, height = 360, seed = 0, params = {} } = {}) {
+  canvas.width = width;
+  canvas.height = height;
+  const merged = merge({ ...params, probeWidth: width, probeHeight: height });
+  const viewport = { width, height };
+  const camera = buildCamera(merged);
+  const sample = camera.at(frame, viewport);
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = PALETTE.bg;
+  ctx.fillRect(0, 0, width, height);
+
+  drawGrid(camera, sample, viewport);
+  drawMarks(sample, viewport, seed);
+  if (merged.layout === 'pipeline') drawPipeline(sample, viewport, merged.worldAnchor);
+  else drawBeacon(sample, viewport, merged.worldAnchor);
+
+  const anchorPx = project(merged.worldAnchor, sample, viewport);
+  // The probe marker: a unique magenta square at the module's projected anchor.
+  // Reading it back proves the browser actually rasterised the anchor there.
+  ctx.fillStyle = `rgb(${PROBE.r}, ${PROBE.g}, ${PROBE.b})`;
+  ctx.fillRect(Math.round(anchorPx.x) - 3, Math.round(anchorPx.y) - 3, 7, 7);
+
+  const intended = { x: merged.anchorScreen.x * width, y: merged.anchorScreen.y * height };
+  const measured = merged.probe ? measureProbe(anchorPx) : null;
+
+  window.rigState = {
+    frame: sample.frame,
+    globalFrame: sample.globalFrame,
+    t: sample.t,
+    zoom: sample.zoom,
+    scale: sample.scale,
+    clamped: sample.clamped,
+    layout: merged.layout,
+    centerWorld: sample.centerWorld,
+    worldAnchor: merged.worldAnchor,
+    anchorScreen: merged.anchorScreen,
+    viewport,
+    intendedPx: intended,
+    projectedPx: anchorPx,
+    measuredPx: measured,
+    visible: camera.visibleWorldBounds(sample.frame, viewport),
+  };
+}
+
+/** Centroid of magenta probe pixels in a small box around the anchor. */
+function measureProbe(anchorPx) {
+  const half = 10;
+  const x0 = Math.max(0, Math.floor(anchorPx.x - half));
+  const y0 = Math.max(0, Math.floor(anchorPx.y - half));
+  const w = Math.min(canvas.width, Math.ceil(anchorPx.x + half)) - x0;
+  const h = Math.min(canvas.height, Math.ceil(anchorPx.y + half)) - y0;
+  if (w <= 0 || h <= 0) return null;
+  const data = ctx.getImageData(x0, y0, w, h).data;
+  let sx = 0, sy = 0, count = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (data[i] > 180 && data[i + 1] < 110 && data[i + 2] > 180) { sx += x0 + x; sy += y0 + y; count++; }
+    }
+  }
+  return count === 0 ? null : { x: sx / count, y: sy / count, pixels: count };
+}
+
+window.viscraft = { render };
+render({ frame: 0 });
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinetic type — reading rhythm CodeScene entry</title>
+<style>
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #EAE9E5; }
+canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="kinetic-type"></canvas>
+<script type="module">
+// Entry contract: window.viscraft.ready() loads the delivered font and checks a
+// real CJK/Latin sample; window.viscraft.render(ctx) draws one frame from the
+// capture context. All layout/type logic lives in ./kinetic-type.mjs.
+import { readyKineticType, renderKineticType } from './kinetic-type.mjs';
+
+window.viscraft = {
+  ready: readyKineticType,
+  render(ctx) {
+    renderKineticType(document.getElementById('kinetic-type'), ctx);
+  },
+};
+</script>
+</body>
+</html>

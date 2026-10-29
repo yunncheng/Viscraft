@@ -1,0 +1,4 @@
+<!doctype html><html><head><meta charset="UTF-8"><style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head><body><canvas id="c"></canvas><script>
+const c=document.getElementById('c'),g=c.getContext('2d');
+window.viscraft={render({time,width,height}){c.width=width;c.height=height;g.fillStyle='#000';g.fillRect(0,0,width,height);const p=Math.max(0,Math.min(1,(time-.65)/1.15));g.save();g.translate(width/2,height/2);g.strokeStyle=`rgba(160,195,220,${.14*Math.sin(p*Math.PI)})`;g.lineWidth=.7;g.beginPath();g.ellipse(0,0,150+50*p,.8+2*p,-.1,0,Math.PI*2);g.stroke();g.restore();}};
+</script></body></html>

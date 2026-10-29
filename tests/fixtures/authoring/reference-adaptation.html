@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Reference / Recomposed</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      background: #10161d;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+  <canvas id="stage"></canvas>
+  <script>
+    // Original deterministic editorial collage. Real supplied image pixels are
+    // rendered through the snapshot binding; transforms are authored, not tracked.
+    const canvas = document.getElementById('stage'),
+      g = canvas.getContext('2d', { alpha: false }),
+      images = new Map();
+    const lerp = (a, b, t) => a + (b - a) * t;
+    function readableInk(background) {
+      const channels = background
+        .slice(1)
+        .match(/../g)
+        .map(v => parseInt(v, 16) / 255)
+        .map(v => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      const light = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      return (light + 0.05) / 0.05 > 1.05 / (light + 0.05) ? '#000000' : '#ffffff';
+    }
+    window.viscraft = {
+      async render(ctx) {
+        const p = ctx.params,
+          b = ctx.bindings.subject;
+        if (!b) throw Error('A registered subject image binding is required');
+        let image = images.get(b.url);
+        if (!image) {
+          image = new Image();
+          image.src = b.url;
+          await image.decode();
+          images.set(b.url, image);
+        }
+        canvas.width = ctx.width;
+        canvas.height = ctx.height;
+        const w = ctx.width,
+          h = ctx.height,
+          u = ctx.frame / Math.max(1, p.frames - 1),
+          t = u * u * (3 - 2 * u);
+        g.fillStyle = p.background;
+        g.fillRect(0, 0, w, h);
+        // Margins, baseline and arc provide a stable composition around the changing
+        // subject; contrast and hierarchy stay explicit in the candidate params.
+        g.strokeStyle = p.accent;
+        g.globalAlpha = 0.22;
+        g.lineWidth = Math.max(1, w / 700);
+        g.beginPath();
+        g.arc(w * 0.61, h * 0.48, h * 0.42, -Math.PI * 0.8, Math.PI * 0.82);
+        g.stroke();
+        g.beginPath();
+        g.moveTo(w * 0.065, h * 0.82);
+        g.lineTo(w * 0.935, h * 0.82);
+        g.stroke();
+        g.globalAlpha = 1;
+        const x = lerp(p.from.x, p.to.x, t) * w,
+          y = lerp(p.from.y, p.to.y, t) * h,
+          scale = lerp(p.from.scale, p.to.scale, t),
+          rotation = (lerp(p.from.rotation, p.to.rotation, t) * Math.PI) / 180;
+        const iw = w * scale,
+          ih = (iw * image.naturalHeight) / image.naturalWidth;
+        g.save();
+        g.translate(x, y);
+        g.rotate(rotation);
+        g.drawImage(image, -iw / 2, -ih / 2, iw, ih);
+        g.restore();
+        g.fillStyle = p.accent;
+        g.textBaseline = 'top';
+        g.font = `500 ${Math.max(9, w * 0.016)}px sans-serif`;
+        g.fillText('REFERENCE / RECOMPOSED', w * 0.065, h * 0.07);
+        g.fillStyle = readableInk(p.background);
+        g.font = `600 ${Math.max(12, w * 0.045)}px sans-serif`;
+        g.fillText(p.title, w * 0.065, h * 0.86, w * 0.75);
+        g.fillStyle = p.accent;
+        g.font = `500 ${Math.max(9, w * 0.018)}px monospace`;
+        g.textAlign = 'right';
+        g.fillText(`${String(p.number).padStart(2, '0')} / ${String(p.total).padStart(2, '0')}`, w * 0.935, h * 0.075);
+        g.textAlign = 'left';
+      },
+    };
+  </script>
+</html>

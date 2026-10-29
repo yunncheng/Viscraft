@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>cartoon-jazz — code-authored sound scene</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #111013;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      // Sound contract: window.viscraftSound.render(args) is called exactly once.
+      // It must return exactly `channels` arrays of exactly `samples` samples,
+      // where `samples` is the Source's native per-channel sample span (not a
+      // picture frame count). There is no video contract on this page and no
+      // sample fetch: every voice is synthesised by ./synth.mjs, the
+      // arrangement is ./score.mjs.
+      import {
+        DURATION_SECONDS,
+        buildScore,
+        normalizeParams,
+        renderScore,
+      } from './score.mjs';
+
+      window.viscraftSound = {
+        async ready() {},
+        async render({ sampleRate, channels, samples, params, seed }) {
+          const normalized = normalizeParams(params);
+          if (channels !== 2)
+            throw new Error(`cartoon-jazz: stereo only, got ${channels} channels`);
+          // This score is 32 s: do not pad or truncate, report the exact fields
+          // to keep in sync instead.
+          const expected = Math.round(DURATION_SECONDS * sampleRate);
+          if (samples !== expected)
+            throw new Error(
+              `cartoon-jazz: the Source expects ${samples} samples but 32 s @ ${sampleRate} Hz is exactly ${expected}. ` +
+                'Source.durationSamples is the render length: keep 32 s or re-author score.mjs; ' +
+                'there is deliberately no truncation parameter.',
+            );
+          const score = buildScore(normalized);
+          const rendered = renderScore({ sampleRate, channels, frames: samples, params: normalized, seed });
+          // Measured facts, not an acceptance claim. Useful when inspecting a
+          // rendered Take; the returned object is only the contract channels.
+          window.viscraftSound.score = score;
+          window.viscraftSound.report = rendered.report;
+          return { channels: rendered.channels };
+        },
+        dispose() {
+          window.viscraftSound.score = undefined;
+          window.viscraftSound.report = undefined;
+        },
+      };
+    </script>
+  </body>
+</html>

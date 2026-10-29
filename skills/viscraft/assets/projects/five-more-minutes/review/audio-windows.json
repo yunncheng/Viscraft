@@ -1,0 +1,58 @@
+{
+  "source": "actual rendered soundtrack WAV",
+  "sample_rate": 48000,
+  "channels": 2,
+  "samples": 2880000,
+  "duration": 60.0,
+  "windows": [
+    {
+      "start": 0,
+      "end": 19,
+      "rms_dbfs": -38.65,
+      "peak_dbfs": -17.73
+    },
+    {
+      "start": 19,
+      "end": 25,
+      "rms_dbfs": -41.61,
+      "peak_dbfs": -25.81
+    },
+    {
+      "start": 25,
+      "end": 31,
+      "rms_dbfs": -32.15,
+      "peak_dbfs": -21.04
+    },
+    {
+      "start": 31,
+      "end": 39.3,
+      "rms_dbfs": -34.73,
+      "peak_dbfs": -20.74
+    },
+    {
+      "start": 39.3,
+      "end": 41.6,
+      "rms_dbfs": -200.0,
+      "peak_dbfs": -200.0
+    },
+    {
+      "start": 41.62,
+      "end": 41.85,
+      "rms_dbfs": -21.29,
+      "peak_dbfs": -9.74
+    },
+    {
+      "start": 44,
+      "end": 53,
+      "rms_dbfs": -28.54,
+      "peak_dbfs": -16.61
+    },
+    {
+      "start": 58,
+      "end": 60,
+      "rms_dbfs": -41.12,
+      "peak_dbfs": -25.21
+    }
+  ],
+  "listening": "not available; timbre and subjective mix not verified by listening"
+}
