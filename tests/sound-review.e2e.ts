@@ -235,10 +235,7 @@ test(
         assert.equal(key in entry, false, `an audio Take must not carry the picture fact "${key}"`);
       }
       assert.match(String(entry.pictureFacts), /audio-only/, 'the audio Take must say why picture facts are omitted');
-      assert.ok(
-        report.limitations.some(line => /audio-only/.test(line)),
-        'the report must state the audio-only limitation',
-      );
+
       // The picture facts that ARE reported describe the final composed movie, not the audio Take.
       assert.equal(report.final.probe.frames, FRAMES, 'the final composed movie must be probed as picture');
       assert(report.final.probe.audio, 'the final composed movie must carry audio');

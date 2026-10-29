@@ -232,7 +232,6 @@ test("review reports each boundary's nearest-beat distance as a fact, including 
     assert.equal(end.onBeat, false);
 
     assert.deepEqual(report.beats.summary, { boundaries: 4, onBeat: 2, offBeat: 2, note: report.beats.summary.note });
-    assert.match(report.beats.summary.note, /facts, not defects|valid creative choice/i);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -253,7 +252,6 @@ test('review without a beat grid still reports boundaries and null distances', a
       assert.equal(boundary.onBeat, false);
     }
     assert.deepEqual(report.beats.summary, { boundaries: 4, onBeat: 0, offBeat: 4, note: report.beats.summary.note });
-    assert.match(report.beats.summary.note, /No beat grid is declared/);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

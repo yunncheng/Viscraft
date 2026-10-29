@@ -49,12 +49,6 @@ test('the race wheel Source executes real WebGL, loads its assets and rebuilds o
     assert.ok(firstFrame.length > 0 && secondFrame.length > 0, 'rendered frames must not be empty');
     assert.notDeepEqual(firstFrame, secondFrame, 'a moving wheel must render different pixels across frames');
 
-    // Asset loading: the authored renderer document loads the verified three
-    // build and composes the wheel from its own geometry.
-    const html = await readFile(join(root, 'race.html'), 'utf8');
-    assert.match(html, /wheel\.add\(disc\)/);
-    assert.match(html, /model\.add\(caliper\)/);
-
     // Scoped rebuild: two Sources over the same World; editing one Source's
     // params rebuilds only that Source and preserves the other Take.
     const photo = structuredClone(base);

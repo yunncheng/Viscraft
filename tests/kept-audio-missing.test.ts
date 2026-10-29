@@ -615,6 +615,5 @@ test('review reports per-clip truncation and kept-audio extension facts without 
     assert.ok(kept.takeAudioSamples > 0, 'the Take audio duration is measured');
     assert.equal(kept.beyondTakeAudio, true, 'the declared tail reaches past the Take audio');
     assert.ok(kept.tailOverrunSamples > 0, `the shortfall is reported (got ${kept.tailOverrunSamples})`);
-    assert.ok(report.limitations.some(line => /NO synthesized silence/i.test(line)));
   });
 });

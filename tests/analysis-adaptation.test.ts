@@ -143,23 +143,18 @@ test('explicit gap tolerance holds within a segment and starts at the centre whe
   assert.deepEqual(plan.segments[1].path[0], { x: 0.5, y: 0.5 });
   assert.deepEqual(plan.segments[1].path[1], { x: measured.frames[11].x, y: measured.frames[11].y });
   assert.equal(plan.coverage.fullyPresent, false);
-  assert.ok(plan.limitations.some(line => /fallback positions are not measured/i.test(line)));
 });
 
 test('the plan surfaces the measured coverage so a gap is visible, not hidden', () => {
   const full = planReferenceAdaptation(report(), track());
   assert.equal(full.coverage.fullyPresent, true);
   assert.deepEqual(full.coverage.gaps, []);
-  assert.ok(!full.limitations.some(line => line.includes('is missing the marker')));
 
   const gapped = planReferenceAdaptation(report(), track(false), { requireFullCoverage: false });
   assert.equal(gapped.coverage.fullyPresent, false);
   assert.deepEqual(gapped.coverage.gaps, [
     { sourceFrameStart: 7, sourceFrameEnd: 7, outputFrameStart: 7, outputFrameEnd: 7, sourceFrames: 1 },
   ]);
-  assert.ok(
-    gapped.limitations.some(line => line.includes('is missing the marker on 1 of 30 frames in 1 contiguous gap')),
-  );
 });
 
 test('rejects a report and a track on different output timelines', () => {

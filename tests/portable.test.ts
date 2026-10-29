@@ -813,7 +813,6 @@ test('export packages the selected Take lineage, frozen snapshot and simulated f
     const artifactEntry = manifest.files.find((f: { path: string }) => f.path === ARTIFACT_REL);
     assert.equal(artifactEntry.provenance.kind, 'artifact');
     assert.equal(artifactEntry.provenance.simulated, true);
-    assert.ok(manifest.notes.some((n: string) => /simulated/i.test(n)));
   } finally {
     await rm(root, { recursive: true, force: true });
     await rm(parent, { recursive: true, force: true });

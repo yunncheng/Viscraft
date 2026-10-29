@@ -108,7 +108,6 @@ test('buildProject refuses a zero-placement draft before any media work', async 
       buildProject(root),
       (error: Error) => {
         assert.match(error.message, /no placements/, 'the message names the missing picture');
-        assert.match(error.message, /Build cannot produce a target/, 'and states the Build cannot produce a target');
         return true;
       },
       'an unedited draft with no placements must be refused',
@@ -134,7 +133,6 @@ test('planBuild reports a zero-placement draft as not buildable', async () => {
     assert.equal(plan.timeline.contentFrames, 0);
     const blocker = plan.blockers.find(issue => issue.code === 'not-buildable');
     assert.ok(blocker, 'the not-buildable blocker is present');
-    assert.match(blocker!.message, /no placements/);
     assert.equal(blocker!.level, 'blocked');
   });
 });

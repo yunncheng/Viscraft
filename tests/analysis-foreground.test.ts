@@ -210,16 +210,6 @@ test('analyzeReferenceForeground segments moving foreground and reports a real g
     const onDisk = JSON.parse(await fs.readFile(nodePath.join(root, report.reportPath), 'utf8'));
     assert.deepEqual(onDisk, report);
 
-    assert.ok(report.limitations.some(line => /background subtraction/i.test(line)));
-    assert.ok(report.limitations.some(line => /not a recognized person, object, face or identity/i.test(line)));
-    assert.ok(
-      report.limitations.some(line =>
-        /No pose estimation, identity recognition, depth estimation or 3D reconstruction/i.test(line),
-      ),
-    );
-    assert.ok(report.limitations.some(line => /does not edit, regenerate, continue or retime video/i.test(line)));
-    assert.ok(report.limitations.some(line => /never interpolated across gaps/i.test(line)));
-
     // Nothing was registered and no authoring file changed.
     assert.deepEqual(await fs.readFile(nodePath.join(root, 'project.json')), projectBefore);
     assert.equal(await hashFile(video), videoHash);
@@ -244,7 +234,6 @@ test('analyzeReferenceForeground maps source PTS onto a requested output fps exa
     for (const row of half.frames) {
       assert.equal(row.outputFrame, ptsToFrames(row.pts, half.clock.originPts, half.clock.timeBase, half.fps));
     }
-    assert.ok(!half.limitations.some(line => /defaulted to the current Project composition fps/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

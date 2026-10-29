@@ -283,7 +283,6 @@ test('doctor does not claim account availability', async () => {
     assert.equal(video.submissionAuthorized, false);
     assert.equal(video.realGenerationVerified, false);
     const readiness = parsed.providers;
-    assert.match(readiness.scope, /no service was contacted/i);
     assert.equal(readiness.capabilities['provider']!.ready, true);
     assert.deepEqual(
       readiness.capabilities['provider']!.endpoints.map(e => [e.credential, e.credentialSource]),

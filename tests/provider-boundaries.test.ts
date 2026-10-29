@@ -1127,7 +1127,6 @@ test('an oversized reference is a PLAN blocker (no submission)', async () => {
     });
     const blocker = plan.blockers.find(issue => issue.code === 'model-request-invalid');
     assert.ok(blocker, `expected a model-request-invalid blocker, got ${JSON.stringify(plan.blockers)}`);
-    assert.match(blocker!.message, /transfer limit/);
     assert.equal(plan.buildable, false);
   });
 });

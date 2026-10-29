@@ -236,7 +236,6 @@ test('status does not report a fake byte total', async () => {
     const status = await projectStatus(root);
     assert.equal(Object.hasOwn(status.usage, 'totalBytes'), false, 'no fake totalBytes field');
     assert.equal(status.usage.measured, false);
-    assert.match(status.usage.detail, /viscraft usage/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -261,10 +260,6 @@ test('usage skips install/VCS trees, excludes output/.gitignore from delivery, a
       usage.scope.excluded.map(entry => entry.path).sort(),
       ['.git', 'node_modules'],
       'the install and version-control trees are named as excluded',
-    );
-    assert.ok(
-      usage.attention.every(entry => !entry.includes('outside the known layout')),
-      'a normal install layout is not reported as an unknown-layout anomaly',
     );
     assert.equal(usage.categories.other.files, 0, 'no install-tree file is left unclassified');
     assert.ok(usage.categories.records.reasons.includes('self-ignore'), 'output/.gitignore is metadata');

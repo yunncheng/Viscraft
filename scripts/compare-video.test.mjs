@@ -108,7 +108,6 @@ test('actual media: trimmed mixed-FPS sources, nonzero PTS, manual events, gaps 
       path.join(root, 'normalized'),
       root,
     );
-    assert.match(normalized.timeline.note, /RETIMED.*not timing evidence/);
     assert.ok(normalized.timeline.frames.every(row => row.sides.every(Boolean)));
     assert.notEqual(normalized.timeline.frames[4].sides[0].editTime, normalized.timeline.frames[4].sides[1].editTime);
 

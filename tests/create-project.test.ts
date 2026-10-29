@@ -158,17 +158,7 @@ test('a created project validates; a draft has no composition and a film draft i
   });
 });
 
-test('creating a project self-ignores the Runtime-owned .viscraft/ directory', async () => {
-  await withRoot(async root => {
-    // `createProject` acquires the author lock, which first creates `.viscraft/`;
-    // requires that directory to write a `*`-only `.gitignore` the moment it is
-    // created, so the author's `git status` never lists Runtime records.
-    await createProject(root, { title: 'Self ignore' });
-    assert.equal(await readFile(join(root, '.viscraft', '.gitignore'), 'utf8'), '*\n');
-  });
-});
-
-test('scaffoldProject writes AGENTS.md and a root .gitignore, and inits git', async t => {
+test('scaffoldProject initializes Git, writes workspace files and ignores generated state', async t => {
   if (!(await gitAvailable())) return t.skip('git is not available');
   await withRoot(root =>
     withGitDiscoveryBoundary(root, async () => {
@@ -176,14 +166,22 @@ test('scaffoldProject writes AGENTS.md and a root .gitignore, and inits git', as
       assert.equal(result.agentsMd, 'written');
       assert.equal(result.gitignore, 'written');
       assert.equal(result.git, 'initialized', 'an empty directory outside any repo is initialised');
-      const agents = await readFile(join(root, 'AGENTS.md'), 'utf8');
-      assert.match(agents, /doctor/, 'it points at the real facts the host checks');
-      assert.match(agents, /status/, 'it tells the agent to run status first');
-      assert.match(agents, /host/i, 'it says the host supplies the matching Runtime/Skill');
-      assert.doesNotMatch(agents, /authorized-viscraft-tarball/, 'it does not fabricate a tarball path');
-      assert.doesNotMatch(agents, /npm install viscraft-runtime/, 'it does not invent a registry installation command');
-      assert.equal(await readFile(join(root, '.gitignore'), 'utf8'), 'node_modules/\n');
+      assert.ok((await stat(join(root, 'AGENTS.md'))).size > 0, 'workspace notes are created');
       assert.ok((await stat(join(root, '.git'))).isDirectory(), 'git init created a repository');
+      await createProject(root, { title: 'Workspace ignore fixture' });
+      await mkdir(join(root, 'node_modules'));
+      await writeFile(join(root, 'node_modules', 'dependency.js'), 'export {};');
+      await writeFile(join(root, '.viscraft', 'private.json'), '{}');
+      const ignored = await runCommand('git', [
+        '-C',
+        root,
+        'check-ignore',
+        'node_modules/dependency.js',
+        '.viscraft/private.json',
+      ]);
+      assert.deepEqual(ignored.trim().split(/\r?\n/).sort(), ['.viscraft/private.json', 'node_modules/dependency.js']);
+      const visible = await runCommand('git', ['-C', root, 'ls-files', '--others', '--exclude-standard']);
+      assert.ok(visible.split(/\r?\n/).includes('project.json'), 'author state remains visible to Git');
     }),
   );
 });

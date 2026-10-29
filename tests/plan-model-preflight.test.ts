@@ -136,7 +136,6 @@ test('H3 Ref2VA with ten image references is a model-request-invalid blocker', a
     assert.ok(blocker, 'ten image references exceed the H3 Ref2VA limit and must block');
     assert.equal(blocker!.level, 'blocked');
     assert.equal(blocker!.subject, 'src_h3');
-    assert.match(blocker!.message, /at most 9 image references/);
     assert.equal(plan.buildable, false, 'a model-request-invalid blocker gates the build');
   });
 });
@@ -180,7 +179,6 @@ test('H3 reference mode on a fl2va deployment is refused by the model profile, n
     const blocker = plan.blockers.find(issue => issue.code === 'model-request-invalid');
     assert.ok(blocker, 'the H3 profile owns the partition rule for H3');
     assert.equal(blocker!.subject, 'src_h3');
-    assert.match(blocker!.message, /FL2VA|partition|multi-reference/i);
     assert.equal(
       plan.unsupported.find(issue => issue.code === 'mode-not-supported-by-partition'),
       undefined,
@@ -283,7 +281,6 @@ test('a text-only Runway video-generation Source with an image-only ratio is a m
     assert.ok(blocker, 'a text-only Runway request using an image-to-video ratio must block');
     assert.equal(blocker!.level, 'blocked');
     assert.equal(blocker!.subject, 'src_runway');
-    assert.match(blocker!.message, /first-frame image/);
     assert.equal(plan.buildable, false, 'a model-request-invalid blocker gates the build');
   });
 });

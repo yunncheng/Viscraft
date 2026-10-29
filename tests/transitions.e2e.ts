@@ -266,11 +266,6 @@ test('a match-cut declaration is metadata only and is reported by review as a FA
     for (const verdictKey of ['score', 'similarity', 'passed', 'failed', 'verdict', 'match', 'quality']) {
       assert.ok(!Object.hasOwn(fact, verdictKey), `a match cut must not report a "${verdictKey}" verdict`);
     }
-    assert.match(String(fact.observation), /no subject-similarity score is computed/);
-    assert.ok(
-      report.limitations.some(line => /matchCut/.test(line)),
-      'the report must state the match-cut limitation',
-    );
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

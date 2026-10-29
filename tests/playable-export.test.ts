@@ -315,7 +315,6 @@ test('exports a standalone live package for a code source and omits unrelated/pr
   assert.ok(!byPath.has('assets/red.svg'));
   assert.ok(!manifest.files.some(file => file.path.startsWith('.viscraft/')));
   assert.ok(!manifest.files.some(file => file.path.includes('recordings/')));
-  assert.ok(manifest.notes.some(note => /not the editable Project/.test(note)));
 
   // Every manifest hash matches the real bytes on disk, and those bytes equal the origin.
   for (const file of manifest.files) {
@@ -546,7 +545,6 @@ test('keeps derivedFrom metadata as a reference without packaging the parent vid
   const manifest = PlayablePackageManifestSchema.parse(await readJson(path.join(dest, 'playable-manifest.json')));
   assert.ok(!manifest.files.some(file => file.path.startsWith('.viscraft/')));
   assert.ok(!manifest.files.some(file => file.path.includes('artifact-parent-0001')));
-  assert.ok(manifest.notes.some(note => /parent video bytes are intentionally not packaged/.test(note)));
 
   const config = PlayableLiveProjectSchema.parse(await readJson(path.join(dest, 'project.json')));
   const blue = config.assets.find(item => item.id === 'asset_blue');

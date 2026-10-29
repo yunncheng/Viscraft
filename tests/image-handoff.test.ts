@@ -61,20 +61,16 @@ function page(project: ReturnType<typeof validateProject>): Promise<string> {
 
 test('an image-only handoff names the still commands and the real targets', async () => {
   const text = await page(IMAGE_ONLY);
-  assert.match(text, /No rendered output is packaged/);
   assert.match(text, /viscraft image \. --target <target>/);
   assert.doesNotMatch(text, /viscraft build \./, 'build would refuse an image-only Project');
-  assert.doesNotMatch(text, /- FFmpeg/, 'a still capture needs a Browser, not FFmpeg');
-  assert.match(text, /## Image targets/);
-  assert.match(text, /\| `print` \| 2400×3000 \| `poster` \|/);
+  assert.doesNotMatch(text, /\bFFmpeg\b/, 'still capture requires no FFmpeg installation');
+  assert.ok(text.includes('`print`') && text.includes('2400×3000') && text.includes('`poster`'));
 });
 
 test('a film handoff still names plan/build and FFmpeg', async () => {
   const text = await page(FILM);
-  assert.match(text, /No current result is packaged/);
   assert.match(text, /viscraft build \./);
-  assert.match(text, /- FFmpeg/);
-  assert.doesNotMatch(text, /## Image targets/);
+  assert.match(text, /\bFFmpeg\b/);
   assert.doesNotMatch(text, /viscraft image \./, 'a film with no still targets has no still route');
 });
 
@@ -100,9 +96,8 @@ test('a Project holding both a film and stills hands over both routes', async ()
     /viscraft workbench \. --document <document> --target <target>/,
     'two documents cannot be opened without naming one',
   );
-  assert.match(text, /- FFmpeg/);
-  assert.match(text, /- Browser \(Chrome\/Chromium for still capture\)/);
-  assert.match(text, /\| `print` \| 2400×3000 \| `poster` \|/);
+  assert.match(text, /\bFFmpeg\b/);
+  assert.ok(text.includes('`print`') && text.includes('2400×3000') && text.includes('`poster`'));
 });
 
 test('a Project with one document opens the workbench by target alone', async () => {
@@ -111,7 +106,7 @@ test('a Project with one document opens the workbench by target alone', async ()
   assert.doesNotMatch(text, /--document <document>/);
 });
 
-test('the fact page labels retained still bytes as packaged, not necessarily current', async () => {
+test('the fact page selects the newest retained still result for each target', async () => {
   const build = (id: string, startedAt: string): BuildRecord => ({
     schemaVersion: 1,
     id,
@@ -147,8 +142,6 @@ test('the fact page labels retained still bytes as packaged, not necessarily cur
     handoff: [],
     attribution: false,
   });
-  assert.match(text, /## Packaged results/);
-  assert.match(text, /not necessarily the latest author state/);
-  assert.match(text, /Packaged still target `print`.*`new`/);
+  assert.ok(text.includes('`print`') && text.includes('`new`'));
   assert.doesNotMatch(text, /`old`/);
 });

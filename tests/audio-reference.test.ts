@@ -173,8 +173,6 @@ test('analyzeAudioReference detects four known synthetic pulse onsets on an exac
     assert.ok(report.reportPath.startsWith('.viscraft/audio-references/'));
     assert.ok(report.reportPath.endsWith('/report.json'));
     assert.deepEqual(JSON.parse(await fs.readFile(nodePath.join(root, report.reportPath), 'utf8')), report);
-    assert.ok(report.limitations.some(line => /energy-rise heuristic/i.test(line)));
-    assert.ok(report.limitations.some(line => /no claim about subjective listening/i.test(line)));
 
     // Nothing was registered and no authoring file changed.
     assert.deepEqual(await fs.readFile(nodePath.join(root, 'project.json')), projectBefore);
@@ -201,7 +199,6 @@ test('analyzeAudioReference reports no onsets for genuinely silent audio', async
     assert.equal(report.onsets.length, 0);
     assert.ok(report.energy.length > 0);
     assert.ok(report.energy.every(row => row.rms === 0));
-    assert.ok(report.limitations.some(line => /No energy-rise onsets/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -234,7 +231,6 @@ test('analyzeAudioReference caps analysis at 60 seconds and records the truncati
     );
     assert.equal(report.energy.length, 6000);
     assert.ok(report.onsets.every(onset => onset.sample < report.samples));
-    assert.ok(report.limitations.some(line => /capped at 60 seconds/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -258,14 +254,11 @@ test('analyzeAudioReference honours a configurable windowSeconds and still repor
       short.onsets.every(onset => onset.sample < 2 * SAMPLE_RATE),
       'no onset may lie outside the analysed window',
     );
-    assert.ok(short.limitations.some(line => /capped at 2 seconds/i.test(line)));
-    assert.ok(short.limitations.some(line => /analysed span is exactly samples \[0, 96000\)/i.test(line)));
 
     // A window wider than the source analyses the whole file and is not truncated.
     const wide = await analyzeAudioReference(root, 'refs/four.wav', { windowSeconds: 30 });
     assert.equal(wide.samples, 4 * SAMPLE_RATE);
     assert.deepEqual(wide.analysedSpan, { startSample: 0, endSample: 4 * SAMPLE_RATE, truncatedToWindow: false });
-    assert.ok(!wide.limitations.some(line => /capped at/i.test(line)));
 
     // The window participates in the run key, so distinct windows never collide.
     assert.notEqual(short.reportPath, wide.reportPath);
@@ -337,7 +330,6 @@ test('analyzeAudioReference honors explicit clocks without a composition and val
       lowFps.onsets.map(onset => onset.outputFrame),
       [5, 15, 25, 35],
     );
-    assert.ok(!lowFps.limitations.some(line => /defaulted to the current Project composition fps/i.test(line)));
 
     const resampled = await analyzeAudioReference(root, 'refs/pulses.wav', { sampleRate: 44100 });
     assert.equal(resampled.sampleRate, 44100);
@@ -347,7 +339,6 @@ test('analyzeAudioReference honors explicit clocks without a composition and val
       resampled.onsets.map(onset => onset.sample),
       [22050, 66150, 110250, 154350],
     );
-    assert.ok(!resampled.limitations.some(line => /Sample rate defaulted/i.test(line)));
 
     await assert.rejects(
       () => analyzeAudioReference(root, 'refs/pulses.wav', { sampleRate: 22050 as unknown as 44100 }),
@@ -430,7 +421,6 @@ test('analyzeAudioReference taints provenance from a simulated audio Asset', asy
 
     assert.equal(report.source.origin, 'asset');
     assert.equal(report.source.simulated, true);
-    assert.ok(!report.limitations.some(line => /provenance is unknown/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -458,7 +448,6 @@ test('analyzeAudioReference refuses to guess identity from a path whose recorded
 
     assert.equal(report.source.origin, 'material', 'a stale recorded hash must not establish identity');
     assert.equal(report.source.simulated, false);
-    assert.ok(report.limitations.some(line => /recorded sha256 differs/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

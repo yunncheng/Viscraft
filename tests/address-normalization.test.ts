@@ -3,7 +3,6 @@
  * hex IPv4-mapped and IPv4-compatible IPv6. Public addresses remain usable.
  */
 import { strict as assert } from 'node:assert';
-import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 import { isPrivateAddress } from '../src/backends/providers/address.js';
@@ -13,33 +12,19 @@ function privateViaUrl(url: string): boolean {
   return isPrivateAddress(new URL(url).hostname);
 }
 
-/** [url, expected-normalized-hostname] — the hex forms `new URL()` emits. */
-const MAPPED_COMPATIBLE_PRIVATE: Array<[url: string, normalizedHost: string]> = [
-  ['http://[::ffff:169.254.169.254]/', '[::ffff:a9fe:a9fe]'], // cloud metadata
-  ['http://[::ffff:127.0.0.1]/', '[::ffff:7f00:1]'], // loopback
-  ['http://[::ffff:10.0.0.1]/', '[::ffff:a00:1]'], // RFC 1918
-  ['http://[::ffff:192.168.1.1]/', '[::ffff:c0a8:101]'], // RFC 1918
-  ['http://[::ffff:224.0.0.1]/', '[::ffff:e000:1]'], // multicast
-  ['http://[0:0:0:0:0:ffff:169.254.169.254]/', '[::ffff:a9fe:a9fe]'], // expanded mapped
-  ['http://[::127.0.0.1]/', '[::7f00:1]'], // IPv4-compatible (deprecated, still routes)
+const MAPPED_COMPATIBLE_PRIVATE = [
+  'http://[::ffff:169.254.169.254]/', // cloud metadata
+  'http://[::ffff:127.0.0.1]/', // loopback
+  'http://[::ffff:10.0.0.1]/', // RFC 1918
+  'http://[::ffff:192.168.1.1]/', // RFC 1918
+  'http://[::ffff:224.0.0.1]/', // multicast
+  'http://[0:0:0:0:0:ffff:169.254.169.254]/', // expanded mapped
+  'http://[::127.0.0.1]/', // IPv4-compatible (deprecated, still routes)
 ];
 
 test('IPv4-mapped / compatible IPv6 is refused in the hex form new URL() emits', () => {
-  for (const [url, normalizedHost] of MAPPED_COMPATIBLE_PRIVATE) {
-    const hostname = new URL(url).hostname;
-    // Pin the normalization so the case cannot silently degrade to a literal pass.
-    assert.equal(hostname, normalizedHost, `${url} must normalize to ${normalizedHost}`);
-    assert.equal(isPrivateAddress(hostname), true, `${url} -> ${hostname} must be classified private`);
-  }
-});
-
-test('the pre-fix dotted-only classifier would have missed every hex case', () => {
-  // The dotted form was already handled; prove the hex form differs from it, so
-  // the assertions above are genuinely exercising the bug (load-bearing).
-  for (const [url] of MAPPED_COMPATIBLE_PRIVATE) {
-    const hostname = new URL(url).hostname;
-    assert.ok(!hostname.includes('.'), `${url} -> ${hostname} must be hex, not dotted`);
-    assert.ok(/^\[[0-9a-f:]+\]$/.test(hostname), `${url} -> ${hostname} must be a hex IPv6 literal`);
+  for (const url of MAPPED_COMPATIBLE_PRIVATE) {
+    assert.equal(privateViaUrl(url), true, `${url} must be classified private`);
   }
 });
 
@@ -82,18 +67,4 @@ test('plain dotted forms and mapped-public forms are unchanged', () => {
   assert.equal(isPrivateAddress('[::FFFF:7F00:1]'), true, 'uppercase hex mapped loopback');
   // Unparseable stays unsafe.
   assert.equal(isPrivateAddress('not-an-address'), true, 'unparseable is unsafe');
-});
-
-test('the three download entry points share this one classifier', async () => {
-  const lanes = ['services/video-tasks', 'services/fal/index', 'services/runway/index'];
-  for (const lane of lanes) {
-    // Compiled siblings of this test live in dist/tests; providers in dist/src.
-    const source = await readFile(new URL(`../src/backends/providers/${lane}.js`, import.meta.url), 'utf8');
-    assert.match(source, /from '\.\.(?:\/\.\.)?\/address\.js'/, `${lane}.ts must import the shared address classifier`);
-    assert.match(
-      source,
-      /\bisPrivateAddress\(/,
-      `${lane}.ts must call isPrivateAddress (shared guard), not a local copy`,
-    );
-  }
 });

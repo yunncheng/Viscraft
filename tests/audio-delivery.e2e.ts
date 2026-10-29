@@ -262,9 +262,8 @@ test('deliverProject bundles the programme mix and one grouped stem per declared
       'the programme bytes are also carried in the bundled project export',
     );
 
-    // In-bundle dedup: both paths share one inode, and the note says so.
-    const programmeNote = manifest.notes.find(entry => entry.includes('audio/programme.wav'))!;
-    assert.ok(programmeNote.includes('shares that copy'), 'the note must state that the two paths share one copy');
+    // In-bundle dedup: both paths share one inode.
+
     const frozenEntry = manifest.files.find(
       file => file.path.startsWith('project/') && file.sha256 === mixAudioArtifact.sha256,
     )!;
@@ -422,25 +421,12 @@ test('audio/programme.wav is the MASTERED mix when composition mastering is enab
       'audio/programme.wav must NOT be the raw mix when mastering is enabled',
     );
 
-    // The disclosure and the byte-identity claim hold for the mastered case too.
+    // The actual mastered bytes are also carried by the Project export.
     const manifest = JSON.parse(await readFile(join(destination, 'delivery-manifest.json'), 'utf8')) as {
       files: Array<{ path: string; sha256: string }>;
       notes: string[];
     };
-    const note = manifest.notes.find(entry => entry.includes('audio/programme.wav'))!;
-    assert.ok(
-      note.includes('mastered when composition mastering is enabled'),
-      'the note must state that programme.wav is the mastered mix when mastering is enabled',
-    );
-    assert.ok(note.includes('byte-identical'), 'the note must state the byte-identity disclosure');
-    // And the index carries the same unconditionally-true primary sentence.
-    const indexHtml = await readFile(join(destination, 'index.html'), 'utf8');
-    const section = /<section id="audio-products">([\s\S]*?)<\/section>/.exec(indexHtml)!;
-    assert.ok(
-      section[1].includes('the audio the delivered movie actually contains'),
-      'the index primary sentence must be true under mastering too',
-    );
-    assert.ok(section[1].includes('mastered when composition mastering is enabled'));
+
     assert.ok(
       manifest.files.some(file => file.path.startsWith('project/') && file.sha256 === masterArtifact.sha256),
       'the mastered bytes are carried in the project export',

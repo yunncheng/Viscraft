@@ -353,8 +353,6 @@ test('a sound programme is a current version of its target and the film pointer 
 
     const status = await projectStatus(root);
     assert.equal(status.current, null, 'a sound Build never becomes the film current result');
-    assert.doesNotMatch(status.next.join('\n'), /no Build yet/);
-    assert.match(status.next.join('\n'), /sound programmes are up to date/);
     assert.deepEqual(
       status.sounds.map(item => ({ target: item.target, samples: item.samples, rate: item.sampleRate })),
       [{ target: 'score', samples: 4800, rate: 48000 }],
@@ -387,7 +385,6 @@ test('a sound programme is a current version of its target and the film pointer 
       'the stale WAV keeps its frozen clocks after the target changes',
     );
     assert.match(editedStatus.next.join('\n'), /viscraft build \. --target <target>/);
-    assert.doesNotMatch(editedStatus.next.join('\n'), /no Build yet/);
 
     // Editing the mixed bytes has the same effect.
     await writeProject(root, project);

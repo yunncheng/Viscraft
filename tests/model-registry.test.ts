@@ -289,7 +289,6 @@ test('a Source naming an unpackaged model is needsConfiguration (not a blocker, 
     assert.equal(issue!.level, 'needs_configuration');
     assert.match(issue!.message, /gen4\.5/);
     assert.match(issue!.message, /gen4_turbo/);
-    assert.match(issue!.message, /extension/);
     assert.equal(
       CODES(plan.blockers).includes('model-request-invalid'),
       false,

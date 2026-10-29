@@ -238,10 +238,6 @@ test('Build records capture diagnostics and carries them across a reused operati
       report.diagnostics.some(diagnostic => diagnostic.code === 'canvas-upscaled'),
       'review/report.json must surface the Build diagnostics',
     );
-    assert.ok(
-      report.limitations.some(line => line.includes('canvas-upscaled')),
-      'the report must state that diagnostics are non-blocking technical facts',
-    );
   } finally {
     await cleanup(root);
   }

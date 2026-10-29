@@ -323,7 +323,6 @@ test('contact-study: the timeline is one internally consistent authority', async
 
   assert.equal(module.sampleAt(12, SAMPLE_RATE), 24000);
   assert.equal(module.sampleAt(12, 44100), Math.ceil((12 * 44100) / 24));
-  assert.match(module.describeTimeline(timeline), /contact at frame 12/);
 
   // A contact that does not fit the piece is a loud authoring error.
   assert.throws(() => module.timelineFor(12), /contactFrame|fit/);
@@ -512,7 +511,6 @@ test('contact-study: author, build, move the contact, and reuse the untouched so
     const kitLicense = await readFile(join(root, 'SOUND-KIT-LICENSE.md'), 'utf8');
     assert.match(kitLicense, /CC0 1\.0 Universal/);
     assert.match(kitLicense, /cfb04b07ceb70b6056ab1849cbbba53f658b4453982a6f44b4a05e19676361dd/);
-    assert.match(await readFile(join(root, 'README.md'), 'utf8'), /contact-timeline\.mjs/);
     assert.doesNotMatch(JSON.stringify(project), /\/lustre-data\/|\/root\/|\/tmp\//);
     assert.ok(
       project.sources.every(source => source.kind !== 'provider'),

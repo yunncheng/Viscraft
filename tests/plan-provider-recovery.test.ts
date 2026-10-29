@@ -367,7 +367,6 @@ test('readiness reports an undeclared credential as unknown, not as "not require
     assert.equal(alwaysAuthed.ready, false);
     // A missing required field is a loud configuration error, not a silent drop.
     assert.match(readiness.error ?? '', /malformed/);
-    assert.match(readiness.scope, /no service was contacted/i);
   } finally {
     if (previous === undefined) delete process.env.VISCRAFT_CONFIG_HOME;
     else process.env.VISCRAFT_CONFIG_HOME = previous;

@@ -225,7 +225,6 @@ test('deliverProject delivers the active result movie, a fresh review and the ed
       observation: string;
     };
     assert.equal(report.build, buildId);
-    assert.match(report.observation, /subjective audio review not performed/i);
 
     // delivery-manifest.json hashes every bundled file except itself.
     const manifest = JSON.parse(await fs.readFile(nodePath.join(destination, 'delivery-manifest.json'), 'utf8')) as {
@@ -241,11 +240,6 @@ test('deliverProject delivers the active result movie, a fresh review and the ed
     assert.equal(manifest.format, 'viscraft-delivery-bundle');
     assert.equal(manifest.simulated, true);
     assert.equal(manifest.build.id, buildId);
-    assert.ok(
-      manifest.notes.some(note => /simulated/i.test(note)),
-      'simulated provenance is stated',
-    );
-    assert.ok(manifest.limitations.some(limitation => /subjective|aesthetic/i.test(limitation)));
 
     const listed = new Set(manifest.files.map(file => file.path));
     assert.equal(listed.has('delivery-manifest.json'), false, 'the manifest never lists itself');

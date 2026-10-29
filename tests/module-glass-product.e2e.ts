@@ -309,7 +309,7 @@ test('create.mjs resolves three from the running Runtime when no node_modules si
       recipe: join(detached, 'create.mjs'),
       root,
       cwd: parent,
-      options: { frames: 3 },
+      options: { width: 160, height: 90, frames: 3 },
     });
     const project = JSON.parse(await readFile(join(root, 'project.json'), 'utf8')) as {
       assets: Array<{ path: string; sha256: string }>;
@@ -327,6 +327,11 @@ test('create.mjs resolves three from the running Runtime when no node_modules si
     assert.equal(existsSync(detached), false, 'the reference copy is unavailable');
     const built = await buildProject(root);
     assert.equal(built.status, 'succeeded', `the detached-created Project must build: ${built.error ?? ''}`);
+    const movie = built.artifacts.find(artifact => artifact.id === built.result?.artifact);
+    assert.ok(movie?.media, 'the detached Project renders actual media');
+    assert.equal(movie.media.frames, 3);
+    assert.equal(movie.media.width, 160);
+    assert.equal(movie.media.height, 90);
     const exportedPath = join(parent, 'exported');
     const exported = await exportProject(root, exportedPath);
     assert.ok(exported.files >= 15, 'the export carries the authored closure');

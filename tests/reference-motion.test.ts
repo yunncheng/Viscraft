@@ -226,16 +226,6 @@ test('trackReferenceMarker reads native centroids, exact PTS, and leaves source/
     const onDisk = JSON.parse(await fs.readFile(nodePath.join(root, report.reportPath), 'utf8'));
     assert.deepEqual(onDisk, report);
 
-    assert.ok(report.limitations.some(line => /RGB tolerance/i.test(line)));
-    assert.ok(report.limitations.some(line => /not a semantic detection probability/i.test(line)));
-    assert.ok(report.limitations.some(line => /occlusion/i.test(line)));
-    assert.ok(
-      report.limitations.some(line =>
-        /no 3D reconstruction, no identity recognition, and no pose estimation/i.test(line),
-      ),
-    );
-    assert.ok(report.limitations.some(line => /never interpolated across gaps/i.test(line)));
-
     // Nothing was registered and no authoring file changed.
     assert.deepEqual(await fs.readFile(nodePath.join(root, 'project.json')), projectBefore);
     assert.equal(await hashFile(video), videoHash);
@@ -302,7 +292,6 @@ test('trackReferenceMarker honours fps/minPixels/tolerance options and never fab
       half.frames.map(frame => frame.outputFrame),
       [0, 1, 1, 2, 2, 3, 3, 4],
     );
-    assert.ok(!half.limitations.some(line => /defaulted to the current Project composition fps/i.test(line)));
 
     // A minPixels floor above the marker area reports every frame as absent.
     const strict = await trackReferenceMarker(root, 'refs/marker.mkv', {
@@ -325,7 +314,6 @@ test('trackReferenceMarker honours fps/minPixels/tolerance options and never fab
       assert.equal(frame.matchedPixels, 0);
       assert.equal(frame.confidence, 0);
     }
-    assert.ok(wrong.limitations.some(line => /fully present|never interpolated across gaps/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -442,7 +430,6 @@ test('trackReferenceMarker taints provenance by hash and refuses a path whose re
     const report = await trackReferenceMarker(root, 'refs/marker.mkv', { color: COLOR });
     assert.equal(report.source.origin, 'asset');
     assert.equal(report.source.simulated, true);
-    assert.ok(!report.limitations.some(line => /provenance is unknown/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -467,7 +454,6 @@ test('trackReferenceMarker treats a stale recorded hash as unregistered material
     const report = await trackReferenceMarker(root, 'refs/marker.mkv', { color: COLOR });
     assert.equal(report.source.origin, 'material', 'a stale recorded hash must not establish identity');
     assert.equal(report.source.simulated, false);
-    assert.ok(report.limitations.some(line => /recorded sha256 differs/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

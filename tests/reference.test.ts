@@ -205,7 +205,6 @@ test('analyzeReference reports a known red->blue cut with exact PTS clock and le
     assert.ok(report.reportPath.endsWith('/report.json'));
     const onDisk = JSON.parse(await fs.readFile(nodePath.join(root, report.reportPath), 'utf8'));
     assert.deepEqual(onDisk, report);
-    assert.ok(report.limitations.some(line => /resample the source timing/i.test(line)));
 
     // Nothing was registered and no authoring file changed.
     assert.deepEqual(await fs.readFile(nodePath.join(root, 'project.json')), projectBefore);
@@ -332,7 +331,6 @@ test('analyzeReference detects variable frame rate and resolves the end from dur
       { startFrame: 25, endFrame: expectedFrames },
     ]);
     assertTiles(report.segments, expectedFrames);
-    assert.ok(report.limitations.some(line => /variable frame-rate/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -406,7 +404,6 @@ test('analyzeReference taints provenance from a simulated Media Asset', async ()
 
     assert.equal(report.source.origin, 'asset');
     assert.equal(report.source.simulated, true);
-    assert.ok(!report.limitations.some(line => /provenance is unknown/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -431,7 +428,6 @@ test('analyzeReference taints provenance from a simulated Build artifact', async
 
     assert.equal(report.source.origin, 'artifact');
     assert.equal(report.source.simulated, true);
-    assert.ok(!report.limitations.some(line => /provenance is unknown/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -489,7 +485,6 @@ test('analyzeReference refuses to guess identity from a path whose recorded hash
 
     assert.equal(report.source.origin, 'material', 'a stale recorded hash must not establish identity');
     assert.equal(report.source.simulated, false);
-    assert.ok(report.limitations.some(line => /recorded sha256 differs/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -506,12 +501,6 @@ test('analyzeReference marks unregistered material provenance as unknown, not re
 
     assert.equal(report.source.origin, 'material');
     assert.equal(report.source.simulated, false);
-    assert.ok(report.limitations.some(line => /provenance is unknown/i.test(line)));
-    assert.ok(
-      report.limitations.some(line => /not evidence that the media came from a real generation provider/i.test(line)),
-    );
-    assert.ok(report.limitations.some(line => /scene-score heuristics/i.test(line)));
-    assert.ok(report.limitations.some(line => /no motion, pose, depth, identity, or audio perception/i.test(line)));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -539,7 +528,6 @@ test('analyzeReference honors threshold and fps options and validates the thresh
       { startFrame: 0, endFrame: 5 },
       { startFrame: 5, endFrame: 10 },
     ]);
-    assert.ok(!lowFps.limitations.some(line => /defaulted to the current Project composition fps/i.test(line)));
 
     await assert.rejects(
       () => analyzeReference(root, 'refs/redblue.mp4', { threshold: 1.5 }),

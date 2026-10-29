@@ -145,13 +145,24 @@ test('nested-document resources paint identically in the workbench and image ren
 
     // An actual edit/save/reopen must retain author-relative references and
     // never write a session token into the portable document.
-    await frame.evaluate(() => {
-      const layer = document.querySelector('[data-layer-id="product"]') as HTMLElement;
-      layer.style.left = '14px';
-    });
-    await page.click('#wb-save');
-    await page.waitForFunction(() => document.getElementById('wb-save-state')?.getAttribute('data-state') === 'clean');
+    const [saveResponse] = await Promise.all([
+      page.waitForResponse(
+        response => new URL(response.url()).pathname === '/api/document' && response.request().method() === 'PUT',
+      ),
+      (async () => {
+        await frame.evaluate(() => {
+          const layer = document.querySelector('[data-layer-id="product"]') as HTMLElement;
+          layer.style.left = '14px';
+        });
+        await page.click('#wb-save');
+      })(),
+    ]);
+    assert.equal(saveResponse.status(), 200, await saveResponse.text());
     const saved = await readFile(join(root, 'author/poster.html'), 'utf8');
+    const editRecord = /<script\b[^>]*\bdata-viscraft-layout\b[^>]*>([\s\S]*?)<\/script>/i.exec(saved);
+    assert.ok(editRecord, 'the actual source contains the saved layout edits');
+    const layout = JSON.parse(editRecord[1]) as { layers: Array<{ id: string; dx?: number }> };
+    assert.equal(layout.layers.find(layer => layer.id === 'product')?.dx, 4, 'the requested move reached the file');
     assert(saved.startsWith(HTML.slice(0, 40)));
     assert.match(saved, /href="\.\.\/assets\/product%20tile\.svg"/);
     assert.doesNotMatch(saved, /\/resource\/|token=/);
@@ -172,6 +183,7 @@ test('nested-document resources paint identically in the workbench and image ren
       headers: { 'x-viscraft-token': live.token },
     });
     assert.equal(denied.status, 403, 'parent-relative resolution never grants undeclared file access');
+    await denied.arrayBuffer();
   } finally {
     await browser.close();
     await live.close();

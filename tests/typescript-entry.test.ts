@@ -22,7 +22,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { captureCode } from '../src/backends/browser/capture.js';
 import { emittedJsPath, isTypeScriptPath, transpileStagedTypeScript } from '../src/backends/browser/transpile.js';
 import { buildProject, operationImplementation } from '../src/build/build.js';
@@ -154,10 +154,7 @@ test('a .ts type error fails loudly and writes no frame (non-vacuous)', async ()
   const brokenOut = await fs.mkdtemp(path.join(os.tmpdir(), 'viscraft-ts-out-'));
   try {
     // The failure names the offending file, position and diagnostic — never a blank frame.
-    await assert.rejects(
-      captureCode(brokenRoot, codeSource(), OUTPUT, brokenOut),
-      /captureCode: TypeScript authoring entry failed to compile[\s\S]*helper\.ts:2:\d+ TS2322: Type 'string' is not assignable to type 'number'/,
-    );
+    await assert.rejects(captureCode(brokenRoot, codeSource(), OUTPUT, brokenOut), /helper\.ts:2:\d+ TS2322\b/);
     assert.deepEqual(await frameFiles(brokenOut), [], 'no frames may be written for a type error');
   } finally {
     await cleanup(brokenRoot, brokenOut);
@@ -177,9 +174,16 @@ test('a .ts type error fails loudly and writes no frame (non-vacuous)', async ()
       label: 'captureCode',
     });
     assert.deepEqual(emitted.sort(), ['helper.js', 'scene.js']);
-    const helperJs = await fs.readFile(path.join(staged, 'helper.js'), 'utf8');
-    assert.match(helperJs, /export function tint/);
-    assert.match(helperJs, /sourceMappingURL=data:/, 'the emitted .js embeds an inline source map');
+    const helperPath = path.join(staged, 'helper.js');
+    const helper = (await import(pathToFileURL(helperPath).href)) as { tint: (frame: number) => number[] };
+    assert.deepEqual(helper.tint(2), [80, 22, 14], 'the emitted helper executes the authored function');
+    const helperJs = await fs.readFile(helperPath, 'utf8');
+    const encodedMap = /sourceMappingURL=data:application\/json;base64,([^\s]+)/.exec(helperJs)?.[1];
+    assert.ok(encodedMap, 'the emitted module carries an inline source map');
+    const sourceMap = JSON.parse(Buffer.from(encodedMap, 'base64').toString('utf8'));
+    assert.equal(sourceMap.version, 3);
+    assert.deepEqual(sourceMap.sources, ['helper.ts']);
+    assert.deepEqual(sourceMap.sourcesContent, [VALID_HELPER]);
   } finally {
     await cleanup(fixedRoot, ...(staged ? [staged] : []));
   }

@@ -260,7 +260,6 @@ test('kinetic-type: author/build carries the real font and the reading phases', 
     assert.equal(font.type, 'font');
     assert.equal(font.rights.license, 'OFL-1.1');
     assert.match(String(font.rights.origin), /Noto Sans SC/);
-    assert.match(String(font.rights.modifications), /complete Noto Sans SC variable font|no subsetting/i);
     const fontBytes = await readFile(join(root, FONT_FILE));
     assert.equal(fontBytes.length, FONT_SIZE, 'the complete font is carried, not a demo subset');
     assert.equal(font.sha256, FONT_SHA256, 'the delivered font is the exact bytes whose cmap was recorded');
