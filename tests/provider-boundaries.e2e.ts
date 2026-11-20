@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 import type { Asset, OutputSettings, ProviderSource } from '../src/core/schema.js';
 import { isPrivateAddress } from '../src/backends/providers/address.js';
-import { cancelFal, generateFal } from '../src/backends/providers/services/fal/index.js';
+import { cancelFal, FalPendingError, generateFal } from '../src/backends/providers/services/fal/index.js';
 import { generateVideoApi, VideoApiPendingError } from '../src/backends/providers/services/video-tasks.js';
 import {
   generateImageApi,
@@ -176,7 +176,7 @@ interface FalFixture {
 
 async function withFalFixture(
   fn: (fixture: FalFixture) => Promise<void>,
-  options: { prefix?: string; status?: FalStatus } = {},
+  options: { prefix?: string; status?: FalStatus; omitQueueUrls?: boolean } = {},
 ): Promise<void> {
   const media = await providerVideo();
   const prefix = options.prefix ?? '';
@@ -205,8 +205,9 @@ async function withFalFixture(
           JSON.stringify({
             status: 'IN_QUEUE',
             request_id: 'req_p0',
-            status_url: routes('req_p0').status,
-            response_url: routes('req_p0').result,
+            ...(options.omitQueueUrls
+              ? {}
+              : { status_url: routes('req_p0').status, response_url: routes('req_p0').result }),
           }),
         );
         return;
@@ -283,7 +284,7 @@ test('cancelFal refuses a mode/origin mismatch before any PUT and never targets 
       const options = { testOnly: { baseUrl: fixture.baseUrl }, references: [{ asset: hero, root }] };
       // Submit once; the fixture keeps the request IN_QUEUE so the job stays `submitted`.
       fixture.status = 'IN_QUEUE';
-      await assert.rejects(() => generateFal(root, falSource('c1'), OUTPUT, 'build/c.mp4', options));
+      await assert.rejects(() => generateFal(root, falSource('c1'), OUTPUT, 'build/c.mp4', options), FalPendingError);
       assert.equal(fixture.state.submits, 1);
 
       // Omitted options resolve the PRODUCTION queue -> refused, no PUT.
@@ -319,45 +320,42 @@ test('cancelFal refuses a mode/origin mismatch before any PUT and never targets 
 // full queue base prefix + endpointId in the fal request identity
 // ---------------------------------------------------------------------------
 
-test('fal uses the FULL queue base prefix on the wire and freezes it (queueHash) with the endpointId', async () => {
+test('fal submits and polls under the configured queue prefix and freezes that queue identity', async () => {
   await withRoot(async root => {
     const hero = await writePng(root, 'assets/hero.png');
-    const key = 'FAL_KEY';
-    const previous = process.env[key];
-    process.env[key] = 'fixture-fal-fixture-key';
+    const previous = process.env.FAL_KEY;
+    process.env.FAL_KEY = 'fixture-fal-key';
     try {
       await withFalFixture(
         async fixture => {
-          fixture.status = 'IN_QUEUE';
           const options = {
             endpoint: { protocol: 'fal-queue' as const, baseUrl: fixture.baseUrl },
             authorization: { submit: true, uploadAssets: ['hero'] },
             references: [{ asset: hero, root }],
           };
-          await assert.rejects(() => generateFal(root, falSource('h1'), OUTPUT, 'build/h.mp4', options));
-          // The submit reached the PREFIXED path, not the bare origin path.
-          assert.ok(
-            fixture.state.paths.some(
-              entry => entry.method === 'POST' && entry.path === '/api/queue/alibaba/wan-3.0/image-to-video',
-            ),
-            `submit must use the prefixed route, saw ${JSON.stringify(fixture.state.paths)}`,
+          await assert.rejects(
+            () => generateFal(root, falSource('h1'), OUTPUT, 'build/h.mp4', options),
+            FalPendingError,
           );
+          assert.deepEqual(fixture.state.paths, [
+            { method: 'POST', path: '/api/queue/alibaba/wan-3.0/image-to-video' },
+            { method: 'GET', path: '/api/queue/alibaba/wan-3.0/image-to-video/requests/req_p0/status' },
+          ]);
           const job = JSON.parse(
             await readFile(join(root, `.viscraft/jobs/fal/${attemptStem('falx', 'h1')}.json`), 'utf8'),
-          ) as { queueHash: string; endpointId: string; origin?: string };
-          assert.equal(job.endpointId, 'alibaba/wan-3.0/image-to-video');
-          assert.equal(
-            job.queueHash,
-            stableHash(fixture.baseUrl),
-            'the full prefixed base is frozen, not just its origin',
           );
+          assert.equal(job.state, 'submitted');
+          assert.equal(job.requestId, 'req_p0');
+          assert.equal(job.endpointId, 'alibaba/wan-3.0/image-to-video');
+          assert.equal(job.queueHash, stableHash(fixture.baseUrl));
           assert.equal(job.origin, undefined, 'no remote URL is persisted');
         },
-        { prefix: '/api/queue', status: 'IN_QUEUE' },
+        // The local HTTP fixture omits optional URLs that require HTTPS on this lane.
+        { prefix: '/api/queue', omitQueueUrls: true },
       );
     } finally {
-      if (previous === undefined) delete process.env[key];
-      else process.env[key] = previous;
+      if (previous === undefined) delete process.env.FAL_KEY;
+      else process.env.FAL_KEY = previous;
     }
   });
 });
@@ -661,7 +659,7 @@ test('a target-write failure leaves a recoverable `succeeded` record (zero POST 
       // DIRECTORY, so the retained-original write succeeds and the target
       // `rename` fails.
       await mkdir(join(root, 'outdir'));
-      await assert.rejects(() => generateImageApi(root, IMAGE_REQUEST, 'outdir', options));
+      await assert.rejects(generateImageApi(root, IMAGE_REQUEST, 'outdir', options), { syscall: 'rename' });
       assert.equal(fixture.posts, 1);
       const afterFailure = JSON.parse(await readFile(join(root, JOB_REL), 'utf8')) as { state: string };
       assert.equal(afterFailure.state, 'succeeded', 'definite-success evidence is persisted before the target write');

@@ -393,7 +393,7 @@ test('converts a playable source to live code without copying or replaying its r
   const { result, dest } = await exportTo(fixture);
 
   // The recording was never created on disk; the export must not read it.
-  await assert.rejects(() => stat(path.join(fixture.root, 'recordings/rec/session.json')));
+  await assert.rejects(stat(path.join(fixture.root, 'recordings/rec/session.json')), { code: 'ENOENT' });
 
   const config = PlayableLiveProjectSchema.parse(await readJson(path.join(dest, 'project.json')));
   assert.equal(config.sources[0].kind, 'browser');

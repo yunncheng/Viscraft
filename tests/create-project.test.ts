@@ -193,7 +193,7 @@ test('scaffoldProject does not git init inside an existing work tree', async t =
     const nested = join(root, 'inner', 'project');
     const result = await scaffoldProject(nested);
     assert.equal(result.git, 'already-in-repo');
-    await assert.rejects(stat(join(nested, '.git')), 'it must not nest a second repository inside the enclosing one');
+    await assert.rejects(stat(join(nested, '.git')), { code: 'ENOENT' });
   });
 });
 

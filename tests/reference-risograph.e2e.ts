@@ -20,8 +20,7 @@
  *    2.75 s = the first 12 Hz step at/after the 2.7 s catch) and 76 (basket stow
  *    3.1667 s = the first step at/after 3.15 s). Those frames are decoded and
  *    handed to the review; the sound attacks at the same times are asserted
- *    with real PCM in reference-risograph-audio.test.ts (pure Node) and
- *    reference-risograph-audio.e2e.ts (real author/Build path);
+ *    with the decoded Runtime PCM in reference-risograph-audio.e2e.ts;
  *  - rendering is a stateless pure function of the frame (repeat and
  *    shuffled-order samples agree);
  *  - the exported Project accepts a real SCORE-ONLY edit (music changes, the
@@ -50,6 +49,7 @@ import { exportProject } from '../src/operations/delivery/portable.js';
 import { refreshCodeAsset } from '../src/project/code-assets.js';
 import { loadProject } from '../src/project/project.js';
 import { authorRecipe, sha256 } from './authoring-helpers.js';
+import { toneMagnitude } from './audio-fixtures.js';
 
 const STUDY_DIR = resolve('skills/viscraft/assets/studies/code-visuals/risograph');
 const RECIPE = join(STUDY_DIR, 'create.mjs');
@@ -618,7 +618,7 @@ test('risograph: the shared action facts move the picture plate, music and Foley
       )!;
       return before.artifacts.find(artifact => artifact.id === operation.artifact)!;
     })();
-    const beforeMusicHash = sha256(await readFile(join(root, beforeMusicStem.path)));
+    const beforeMusic = decodeWav(await readFile(join(root, beforeMusicStem.path)));
 
     const exportedPath = join(parent, 'exported');
     await exportProject(root, exportedPath);
@@ -672,7 +672,7 @@ test('risograph: the shared action facts move the picture plate, music and Foley
       )!;
       return after.artifacts.find(artifact => artifact.id === operation.artifact)!;
     })();
-    const afterMusicHash = sha256(await readFile(join(exportedPath, afterMusicStem.path)));
+    const afterMusic = decodeWav(await readFile(join(exportedPath, afterMusicStem.path)));
 
     const firstBell = (wav: DecodedWav) => {
       const from = Math.floor(2.2 * wav.sampleRate);
@@ -707,7 +707,14 @@ test('risograph: the shared action facts move the picture plate, music and Foley
       changedFraction(frameOf(beforeVideo, 20), frameOf(afterVideo, 20)) > 0.005,
       'frame 20 genuinely changes with the yellow gate',
     );
-    assert.notEqual(afterMusicHash, beforeMusicHash, 'the same facts edit changes the music stem');
+    const previousGuitar = toneMagnitude(beforeMusic, 0.78, 0.93, 185);
+    const quietGate = toneMagnitude(afterMusic, 0.78, 0.93, 185);
+    const movedGuitar = toneMagnitude(afterMusic, 1.03, 1.18, 185);
+    assert.ok(
+      previousGuitar > quietGate * 3,
+      `the old guitar attack is gone from the edited mix (${previousGuitar} → ${quietGate})`,
+    );
+    assert.ok(movedGuitar > quietGate * 3, `the guitar is audible at the moved gate (${quietGate} → ${movedGuitar})`);
 
     const changed = changedFraction(frameOf(beforeVideo, 56), frameOf(afterVideo, 56));
     assert.ok(changed > 0.0001, `the edited bell target changes the frame-56 hand action (${changed})`);

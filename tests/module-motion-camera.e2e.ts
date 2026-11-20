@@ -240,7 +240,6 @@ test('motion-camera module: easings, timing, springs and the camera model are co
   const a = M.mulberry32(42);
   const b = M.mulberry32(42);
   for (let i = 0; i < 5; i++) assert.equal(a(), b());
-  assert.equal(M.hash01(7, 3), M.hash01(7, 3));
   assert.notEqual(M.hash01(7, 3), M.hash01(7, 4));
 });
 
@@ -518,21 +517,3 @@ test('rendering is deterministic, holds the aim, and the layout param changes th
 // ---------------------------------------------------------------------------
 // A missing declared resource fails loudly — never a blank successful frame.
 // ---------------------------------------------------------------------------
-test('a missing declared resource fails the capture loudly', async () => {
-  const root = await authorFixture();
-  try {
-    const resources = [...RESOURCES, 'motion-camera-extra.mjs'];
-    await assert.rejects(
-      openCodeScene(
-        root,
-        { entry: ENTRY, resources },
-        { width: 64, height: 64 },
-        { label: 'captureCode', globalName: 'viscraft' },
-      ),
-      (error: unknown) =>
-        /motion-camera-extra\.mjs|ENOENT|no such file/i.test(String((error as Error)?.message ?? error)),
-    );
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});

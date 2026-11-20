@@ -307,9 +307,9 @@ test('release-archived frees media only after a verified outside archive, and re
     await assert.rejects(releaseArchived(root, inside.path, [take.artifact]), /outside the Project/);
     const corrupt = path.join(outside, 'corrupt.tar.gz');
     const bytes = await readFile(archive);
-    bytes[bytes.length - 20] ^= 0xff;
+    bytes[0] ^= 0xff; // Invalid gzip signature without changing the artifact list.
     await writeFile(corrupt, bytes);
-    await assert.rejects(releaseArchived(root, corrupt, [take.artifact]));
+    await assert.rejects(releaseArchived(root, corrupt, [take.artifact]), { code: 'Z_DATA_ERROR' });
     // The red v0 result is no longer in the current lineage, so the archive does not carry it.
     await assert.rejects(releaseArchived(root, archive, [v0.result!.artifact]), /does not hold/);
     assert.equal(await hashFile(path.join(root, takeArtifact.path)), takeArtifact.sha256, 'refusals free nothing');

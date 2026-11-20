@@ -164,15 +164,8 @@ test('glass-product module: params, beats and exploded offsets are correct and p
   assert.equal(gp.beatAt(1).name, 'hero');
   for (const b of gp.BEATS) assert.ok(gp.beatAt(b.from + 1e-6).name === b.name);
 
-  // Deterministic, unseeded-free helpers.
-  for (let i = 0; i < 5; i++) assert.equal(gp.hash01(i), gp.hash01(i));
   assert.notEqual(gp.hash01(1), gp.hash01(2));
-  assert.deepEqual(gp.explodeTilt(4), gp.explodeTilt(4));
   assert.notDeepEqual(gp.explodeTilt(4), gp.explodeTilt(5));
-
-  assert.equal(gp.clamp(2, 0, 1), 1);
-  assert.equal(gp.lerp(0, 10, 0.5), 5);
-  assert.equal(gp.seg(5, 0, 10), 0.5);
 });
 
 // ---------------------------------------------------------------------------

@@ -154,7 +154,7 @@ export function make(n: number): Foo { return { n }; }
       (await fs.readFile(path.join(snapshot, 'main.js'), 'utf8')).includes('export function make'),
       'the `.ts` entry is transpiled as before',
     );
-    await assert.rejects(() => fs.access(path.join(snapshot, 'types.d.js')), 'no meaningless .d.js may be written');
+    await assert.rejects(fs.access(path.join(snapshot, 'types.d.js')), { code: 'ENOENT' });
   } finally {
     await cleanup(snapshot);
   }
@@ -282,10 +282,7 @@ test('recordPlayable refuses a drive-mode World before writing any recording', a
   });
   try {
     await assert.rejects(recordPlayable(root, 'game', SHIFT), /mode 'drive'/);
-    await assert.rejects(
-      () => fs.access(path.join(root, 'recordings')),
-      'no recordings/ directory may be created for a refused drive recording',
-    );
+    await assert.rejects(fs.access(path.join(root, 'recordings')), { code: 'ENOENT' });
   } finally {
     await cleanup(root);
   }

@@ -209,7 +209,6 @@ test('cel module: the ordered layer stack, pose cadence and cached marks are cor
   assert.equal(first, second, 'mark placement is cached, never re-rolled');
   assert.equal(first.length, 12);
   assert.notDeepEqual(cel.staticMarks(8, 12), first, 'a different seed lays out different marks');
-  for (let i = 0; i < 5; i++) assert.equal(cel.hash01(3, i), cel.hash01(3, i));
 
   // Two genuinely different subjects from the same module.
   const fig = cel.subjectPose('figure', 0.3, cel.normalizeParams({ subject: 'figure' }), 160, 90);
@@ -402,20 +401,3 @@ test('rendering is deterministic, flicker-free on a static pose, and pose/light 
 // ---------------------------------------------------------------------------
 // A missing declared resource fails loudly — never a blank successful frame.
 // ---------------------------------------------------------------------------
-test('a missing declared resource fails the capture loudly', async () => {
-  const root = await authorFixture();
-  try {
-    const resources = [...RESOURCES, 'cel-model.mjs'];
-    await assert.rejects(
-      openCodeScene(
-        root,
-        { entry: ENTRY, resources },
-        { width: 64, height: 64 },
-        { label: 'captureCode', globalName: 'viscraft' },
-      ),
-      (error: unknown) => /cel-model\.mjs|ENOENT|no such file/i.test(String((error as Error)?.message ?? error)),
-    );
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});

@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as nodePath from 'node:path';
+import { ZodError } from 'zod';
 
 import { muxVideo } from '../src/backends/media/mux.js';
 import { probeMedia } from '../src/backends/media/probe.js';
@@ -145,23 +146,23 @@ test('composition.fade is optional, defaults its fields and stays strict', () =>
 });
 
 test('muxVideo rejects a fade longer than the programme before touching media', async () => {
-  await assert.rejects(
-    () =>
-      muxVideo('missing-video.mp4', 'missing-audio.wav', OUT, 20, '/tmp/never-written.mp4', {
-        inFrames: 12,
-        outFrames: 12,
-      }),
-    /exceeds the 20-frame programme/,
-    'inFrames + outFrames > totalFrames must be rejected with a clear message',
-  );
-  await assert.rejects(
-    () =>
-      muxVideo('missing-video.mp4', 'missing-audio.wav', OUT, 20, '/tmp/never-written.mp4', {
-        inFrames: -1,
-        outFrames: 0,
-      }),
-    'a negative fade must be rejected by the media layer too',
-  );
+  const dir = await tempDir();
+  try {
+    const video = nodePath.join(dir, 'missing-video.mp4');
+    const audio = nodePath.join(dir, 'missing-audio.wav');
+    const destination = nodePath.join(dir, 'final.mp4');
+    await assert.rejects(
+      muxVideo(video, audio, OUT, 20, destination, { inFrames: 12, outFrames: 12 }),
+      /exceeds the 20-frame programme/,
+    );
+    await assert.rejects(
+      muxVideo(video, audio, OUT, 20, destination, { inFrames: -1, outFrames: 0 }),
+      error => error instanceof ZodError && error.issues.some(issue => issue.path.join('.') === 'inFrames'),
+    );
+    await assert.rejects(fs.stat(destination), { code: 'ENOENT' });
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('an absent or all-zero fade leaves the mux unfiltered (byte-identical) while a real fade changes output', async () => {

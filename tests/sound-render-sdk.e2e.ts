@@ -159,7 +159,6 @@ test(
         destination,
       );
 
-      assert.ok(result.browserVersion.length > 0, 'the renderer must report the real browser version');
       assert.equal(result.samples, SAMPLES, 'the reported span must match the Source durationSamples');
       assert.equal(result.channels, CHANNELS);
       assert.equal(result.sampleRate, RATE);

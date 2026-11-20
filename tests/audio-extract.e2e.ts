@@ -14,6 +14,7 @@ import * as assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as nodePath from 'node:path';
+import { ZodError } from 'zod';
 
 import { extractAudio, ExtractAudioOptionsSchema } from '../src/operations/assets/audio-extract.js';
 import { assertAuthoredPath } from '../src/project/authored-path.js';
@@ -449,7 +450,17 @@ test('an edited audio derivation record is refused at load (formula) and at buil
     // A negative audio-relative index is not a valid index at all (the schema's
     // non-negative integer rejects it before any semantic check).
     await write(forged(d => (d.streamIndex = -1)));
-    await assert.rejects(() => loadProject(root));
+    await assert.rejects(
+      () => loadProject(root),
+      error =>
+        error instanceof ZodError &&
+        error.issues.some(
+          issue =>
+            issue.code === 'too_small' &&
+            issue.minimum === 0 &&
+            issue.path.slice(-2).join('.') === 'derivedFrom.streamIndex',
+        ),
+    );
 
     // Forgeries that stay internally consistent cannot be seen by the schema, so
     // they are caught BOTH at BUILD and at the DELIVERY boundary (export/archive),
@@ -860,7 +871,7 @@ test('extractAudio refuses a runtime/output/credential Asset path instead of wri
 
     // Nothing was written and the Project is untouched.
     assert.deepEqual(await fs.readFile(nodePath.join(root, 'project.json')), before);
-    await assert.rejects(fs.stat(nodePath.join(root, '.viscraft', 'leak.wav')));
+    await assert.rejects(fs.stat(nodePath.join(root, '.viscraft', 'leak.wav')), { code: 'ENOENT' });
     assert.equal((await loadProject(root)).assets.length, 0, 'no Asset may be registered by a refused path');
   } finally {
     await fs.rm(root, { recursive: true, force: true });

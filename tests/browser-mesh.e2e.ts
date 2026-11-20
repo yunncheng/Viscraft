@@ -70,7 +70,7 @@ const MODEL_BINDING = lib.MODEL_BINDING;
 const MODEL_ASSET_ID = lib.MODEL_ASSET_ID;
 const VENDOR_RESOURCES = lib.VENDOR_RESOURCES;
 const MODEL_RIGHTS = {
-  origin: 'original: authored by tests/browser-mesh.test.ts',
+  origin: 'original: authored by tests/browser-mesh.e2e.ts',
   license: 'CC0-1.0',
   redistributable: true,
 };
@@ -232,8 +232,7 @@ test('the browser renders the real GLB mesh via GLTFLoader, placed and filmed by
       frames: 4,
     };
     const bindings = { [MODEL_BINDING]: { id: MODEL_ASSET_ID, path: 'assets/asset_slab.glb', sha256: '' } };
-    const result = await captureWorld(root, source, world, OUTPUT, destination, bindings);
-    assert.match(result.browserVersion, /Chrome|Chromium/);
+    await captureWorld(root, source, world, OUTPUT, destination, bindings);
 
     const frames = (await fs.readdir(destination)).filter(name => name.endsWith('.png')).sort();
     assert.deepEqual(frames, ['frame-000000.png', 'frame-000001.png', 'frame-000002.png', 'frame-000003.png']);

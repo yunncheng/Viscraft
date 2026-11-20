@@ -318,11 +318,11 @@ test('a package swapped DURING production for another self-consistent one is ref
 test('a default export is refused when a member is edited, added, removed or replaced by a symlink', async t => {
   const parent = await tempDir();
   try {
-    const mutate = async (label: string, action: (dir: string) => Promise<void>): Promise<void> => {
+    const mutate = async (label: string, action: (dir: string) => Promise<void | boolean>): Promise<void> => {
       const root = nodePath.join(parent, label);
       await writeAndBuild(root, makeProject());
       await exportProject(root);
-      await action(nodePath.join(root, 'output', 'project'));
+      if ((await action(nodePath.join(root, 'output', 'project'))) === false) return;
       await assert.rejects(
         () => exportProject(root),
         /already exists and has been modified/i,
@@ -337,7 +337,7 @@ test('a default export is refused when a member is edited, added, removed or rep
         const target = nodePath.join(dir, 'project.json');
         const swapped = `${target}.swapped`;
         await fs.rename(target, swapped);
-        if (!(await createSymlinkFixture(t, swapped, target))) return;
+        return createSymlinkFixture(t, swapped, target);
       });
     });
   } finally {

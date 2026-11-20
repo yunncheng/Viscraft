@@ -655,7 +655,7 @@ test('a missing required original fails loudly by default and is never substitut
       'the default scope must name the artifact and the missing hash',
     );
     // Nothing was created by the refused export.
-    await assert.rejects(readdir(path.join(parent, 'out')));
+    await assert.rejects(readdir(path.join(parent, 'out')), { code: 'ENOENT' });
 
     // The explicit restricted scope records the gap instead of failing.
     const destination = path.join(parent, 'restricted');
@@ -1109,7 +1109,7 @@ test('an unknown, checkpoint or non-succeeded extra version is refused loudly an
       exportProject(root, unknown, { extraVersions: [`build-${'z'.repeat(36)}`] }),
       /no Build record with that id exists/,
     );
-    await assert.rejects(readdir(unknown), 'a refused unknown id must create nothing');
+    await assert.rejects(readdir(unknown), { code: 'ENOENT' }, 'a refused unknown id must create nothing');
 
     // A checkpoint id is refused with a distinct, honest message (not "unknown").
     await mkdir(path.join(root, '.viscraft', 'checkpoints'), { recursive: true });
@@ -1119,13 +1119,13 @@ test('an unknown, checkpoint or non-succeeded extra version is refused loudly an
       exportProject(root, checkpoint, { extraVersions: ['checkpoint-one'] }),
       /checkpoints cannot be exported as accepted versions/,
     );
-    await assert.rejects(readdir(checkpoint));
+    await assert.rejects(readdir(checkpoint), { code: 'ENOENT' });
 
     // A non-succeeded Build cannot be carried as an accepted version.
     await makeExtraBuild(root, { status: 'failed' });
     const failed = path.join(parent, 'failed');
     await assert.rejects(exportProject(root, failed, { extraVersions: [EXTRA_BUILD_ID] }), /Build status is failed/);
-    await assert.rejects(readdir(failed));
+    await assert.rejects(readdir(failed), { code: 'ENOENT' });
   } finally {
     await rm(root, { recursive: true, force: true });
     await rm(parent, { recursive: true, force: true });
@@ -1255,7 +1255,7 @@ test('a carried version with a dangling or wrong frame-derivation parent is refu
       exportProject(root, missing, { extraVersions: [EXTRA_BUILD_ID] }),
       /invalid parent Artifact provenance/,
     );
-    await assert.rejects(readdir(missing), 'a refused export must create nothing');
+    await assert.rejects(readdir(missing), { code: 'ENOENT' });
 
     // The parent exists but is non-succeeded.
     await makeParentBuild(root, { status: 'failed' });

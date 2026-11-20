@@ -289,7 +289,7 @@ test('analyzeAudioReference rejects unsafe paths, missing files, symlinks, and a
     await assert.rejects(() => analyzeAudioReference(root, '../escape.wav'), /safe project-relative path/i);
     await assert.rejects(() => analyzeAudioReference(root, '/etc/passwd'), /safe project-relative path/i);
     await assert.rejects(() => analyzeAudioReference(root, 'refs/missing.wav'), /not readable/i);
-    await assert.rejects(() => analyzeAudioReference(root, 'C:\\windows\\evil.wav'));
+    await assert.rejects(() => analyzeAudioReference(root, 'C:\\windows\\evil.wav'), /safe project-relative path/i);
 
     const link = nodePath.join(refs, 'link.wav');
     await t.test('file symlink is refused', async t => {

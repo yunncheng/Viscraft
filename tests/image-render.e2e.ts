@@ -1,15 +1,7 @@
 /**
  * E2E: direct still-image production.
  *
- * Proves, through the real Runtime and a real Browser:
- *  - an image-only Project needs NO timeline (no Scene/Shot/audio/fps),
- *  - `renderImage` captures an editable HTML document at the declared logical
- *    canvas × scale and records a normal Build/Artifact with `target`,
- *  - the artifact bytes are a real PNG at the real output pixels,
- *  - an unchanged document/resources/output REUSES the result with no capture,
- *  - editing the document produces a NEW result and a new hash,
- *  - the schema refuses a Project that declares neither a composition nor a
- *    target, and refuses a target pointing at a missing document.
+ * Covers image-target schema boundaries and decoded transparency.
  */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -20,15 +12,7 @@ import { test } from 'node:test';
 import { renderImage } from '../src/build/image.js';
 import { validateProject } from '../src/project/project.js';
 
-const DOC = `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ink.css"></head>
-<body><div id="card"><h1>FIELD NOTES</h1><p class="sub">A still at the declared canvas</p><div class="rule"></div></div></body></html>`;
-const CSS = `html,body{margin:0;width:320px;height:180px;overflow:hidden;background:#f2ead9}
-#card{box-sizing:border-box;width:320px;height:180px;padding:22px;font-family:sans-serif;color:#2b2520}
-h1{font-size:30px;margin:0 0 6px;letter-spacing:1px}
-.sub{margin:0;color:#6f6558;font-size:13px}
-.rule{height:6px;width:120px;background:#c06a45;margin-top:18px}`;
-
-function project(documentRevision = 1) {
+function project() {
   return {
     schemaVersion: 1,
     id: 'image-e2e',
@@ -38,7 +22,7 @@ function project(documentRevision = 1) {
     assets: [],
     bindings: {},
     sources: [],
-    imageDocuments: [{ id: 'poster', path: 'poster.html', resources: ['ink.css'], revision: documentRevision }],
+    imageDocuments: [{ id: 'poster', path: 'poster.html', resources: ['ink.css'], revision: 1 }],
     imageTargets: [
       {
         id: 'wide',
@@ -52,60 +36,6 @@ function project(documentRevision = 1) {
     ],
   };
 }
-
-/** PNG IHDR width/height (bytes 16..23, big-endian). */
-function pngSize(bytes: Buffer): { width: number; height: number } {
-  assert.equal(bytes.toString('ascii', 1, 4), 'PNG', 'the artifact is a PNG');
-  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
-}
-
-test('an image-only Project renders a real PNG, reuses unchanged work, and re-renders on edit', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'viscraft-image-'));
-  try {
-    await writeFile(join(root, 'poster.html'), DOC);
-    await writeFile(join(root, 'ink.css'), CSS);
-    await writeFile(join(root, 'project.json'), JSON.stringify(validateProject(project()), null, 2) + '\n');
-
-    // No timeline at all: the image path must not require one.
-    const stored = validateProject(project());
-    assert.equal(stored.composition, undefined, 'an image-only Project carries no timeline');
-
-    const first = await renderImage(root, { target: 'wide' });
-    assert.equal(first.reused, false);
-    assert.equal(first.target, 'wide');
-    assert.equal(first.width, 640, 'output pixels = logical width x scale');
-    assert.equal(first.height, 360, 'output pixels = logical height x scale');
-    const bytes = await readFile(join(root, ...first.path.split('/')));
-    assert.deepEqual(pngSize(bytes), { width: 640, height: 360 }, 'the PNG really is 640x360');
-
-    // The Build records the target, so a film result and a still cannot collide.
-    const record = JSON.parse(await readFile(join(root, '.viscraft', 'builds', `${first.build}.json`), 'utf8')) as {
-      target?: string;
-      status: string;
-      artifacts: Array<{ id: string; kind: string; image?: { width: number; height: number } }>;
-    };
-    assert.equal(record.target, 'wide');
-    assert.equal(record.status, 'succeeded');
-    const artifact = record.artifacts.find(candidate => candidate.id === first.artifact)!;
-    assert.equal(artifact.kind, 'image');
-    assert.deepEqual(artifact.image, { width: 640, height: 360, format: 'png', background: 'opaque' });
-
-    // Unchanged inputs: identical result, no second capture.
-    const second = await renderImage(root, { target: 'wide' });
-    assert.equal(second.reused, true, 'an unchanged still is reused');
-    assert.equal(second.artifact, first.artifact);
-
-    // A real edit produces a new result and a new hash.
-    await writeFile(join(root, 'poster.html'), DOC.replace('FIELD NOTES', 'REVISED NOTES'));
-    const third = await renderImage(root, { target: 'wide' });
-    assert.equal(third.reused, false, 'an edited document re-renders');
-    assert.notEqual(third.artifact, first.artifact);
-    const thirdBytes = await readFile(join(root, ...third.path.split('/')));
-    assert.notEqual(thirdBytes.toString('base64'), bytes.toString('base64'), 'the pixels changed');
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
 
 test('the schema accepts an unedited draft but refuses an unknown image document', () => {
   const empty = { ...project(), imageTargets: [], imageDocuments: [] };

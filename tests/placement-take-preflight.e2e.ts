@@ -439,7 +439,7 @@ test('a later Placement.take read beyond its Take is refused before any POST', a
 test('a later Placement.take whose Artifact file is missing is refused before any POST', async () => {
   await withFixture(async fx => {
     await rm(fx.artifactPathOf(fx.takeSilentB), { force: true });
-    await assert.rejects(stat(fx.artifactPathOf(fx.takeSilentB)), 'the Take artifact must be gone');
+    await assert.rejects(stat(fx.artifactPathOf(fx.takeSilentB)), { code: 'ENOENT' });
     await expectRefused(
       fx,
       scenario(fx, { take: fx.takeSilentB, inFrame: 0, outFrame: 12, audio: 'mute' }),

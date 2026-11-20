@@ -115,3 +115,22 @@ export async function writeSignalAsset(root: string, spec: SignalAssetSpec): Pro
   await writeFile(absolute, bytes);
   return asset;
 }
+/** One frequency bin of the mono-average PCM in a half-open time window. */
+export function toneMagnitude(
+  pcm: { sampleRate: number; frames: number; data: Float32Array[] },
+  start: number,
+  end: number,
+  frequency: number,
+): number {
+  const from = Math.max(0, Math.floor(start * pcm.sampleRate));
+  const to = Math.min(pcm.frames, Math.ceil(end * pcm.sampleRate));
+  const step = (2 * Math.PI * frequency) / pcm.sampleRate;
+  let real = 0;
+  let imag = 0;
+  for (let index = from; index < to; index++) {
+    const sample = (pcm.data[0][index] + pcm.data[1][index]) / 2;
+    real += sample * Math.cos(step * index);
+    imag += sample * Math.sin(step * index);
+  }
+  return Math.hypot(real, imag) / (to - from);
+}

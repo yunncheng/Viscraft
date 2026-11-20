@@ -582,10 +582,12 @@ test('an outputFrames shorter than the content is rejected before any media is w
     // No delivery result and no rendered artifact were written.
     await assert.rejects(
       fs.access(nodePath.join(root, '.viscraft', 'result.json')),
+      { code: 'ENOENT' },
       'a rejected length must not write a result',
     );
     await assert.rejects(
       fs.access(nodePath.join(root, '.viscraft', 'artifacts')),
+      { code: 'ENOENT' },
       'a rejected length must not write artifacts',
     );
   } finally {

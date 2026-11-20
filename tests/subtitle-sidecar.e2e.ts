@@ -126,7 +126,7 @@ test('renderSubtitleSidecar rejects captions with blank lines (schema and render
   for (const text of blank) {
     const caption = subtitle({ text });
     assert.equal(SubtitleSchema.safeParse(caption).success, false, `schema rejects ${JSON.stringify(text)}`);
-    assert.throws(() => renderSubtitleSidecar([caption], FPS_25), `renderer rejects ${JSON.stringify(text)}`);
+    assert.throws(() => renderSubtitleSidecar([caption], FPS_25), /text must not contain blank lines/);
   }
   // A single internal break is not a blank line and stays valid.
   assert.equal(SubtitleSchema.safeParse(subtitle({ text: 'line1\nline2' })).success, true);
@@ -146,7 +146,10 @@ test('no accepted caption can inject an extra SRT cue (cue count equals subtitle
   // never reach the sidecar as a second cue.
   const injected = 'line1\n\n1\n00:00:00,000 --> 00:00:00,001\ninjected';
   assert.equal(SubtitleSchema.safeParse(subtitle({ text: injected })).success, false);
-  assert.throws(() => renderSubtitleSidecar([subtitle({ text: injected })], FPS_25));
+  assert.throws(
+    () => renderSubtitleSidecar([subtitle({ text: injected })], FPS_25),
+    /text must not contain blank lines/,
+  );
 
   // Every accepted caption (including multi-line ones) yields exactly one cue.
   const accepted = [
@@ -160,35 +163,12 @@ test('no accepted caption can inject an extra SRT cue (cue count equals subtitle
   assert.equal(/\r(?!\n)/.test(srt), false, 'no bare CR may remain');
 });
 
-// --- Validation reuses the shared SubtitleSchema ----------------------------
-
-test('renderSubtitleSidecar rejects exactly what SubtitleSchema rejects', () => {
-  const invalid: Array<Partial<Subtitle>> = [
-    { color: 'red' },
-    { color: '#fff' },
-    { startFrame: 5, endFrame: 5 },
-    { startFrame: 5, endFrame: 4 },
-    { text: '' },
-    { text: 'a\u0000b' },
-    { fontSize: 0 },
-    { fontSize: 513 },
-  ];
-  for (const overrides of invalid) {
-    const caption = subtitle(overrides);
-    assert.equal(SubtitleSchema.safeParse(caption).success, false, `schema rejects ${JSON.stringify(overrides)}`);
-    assert.throws(() => renderSubtitleSidecar([caption], FPS_25), `sidecar rejects ${JSON.stringify(overrides)}`);
-  }
-  // A valid caption is accepted.
-  assert.equal(SubtitleSchema.safeParse(subtitle()).success, true);
-  assert.doesNotThrow(() => renderSubtitleSidecar([subtitle()], FPS_25));
-});
-
 // --- Delivery integration ----------------------------------------------------
 
 /**
  * A buildable project over three simulated sources (two cuts), one registered
  * audio signal Asset and, when requested, one subtitle. Mirrors
- * tests/delivery.test.ts so the Build produces a real openable movie through the
+ * tests/delivery-contracts.e2e.ts so the Build produces a real openable movie through the
  * normal FFmpeg path.
  */
 function makeProject(withSubtitles: boolean): Project {

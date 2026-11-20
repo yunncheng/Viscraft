@@ -177,9 +177,11 @@ test('sampleWorld interpolates optional rotation with base-transform fallback', 
   closeVec(drone4.transform.rotation, [0.25, 0.5, 0.75], 'drone base rotation preserved');
 });
 
-test('sampleWorld is deterministic and entity sampling is independent of camera', () => {
+test('sampleWorld entities are independent of the camera and prior frame requests', () => {
   const world = baseWorld();
   const first = sampleWorld(world, 'cam_main', 4);
+  sampleWorld(world, 'cam_top', 9);
+  sampleWorld(world, 'cam_follow', 1);
   const second = sampleWorld(world, 'cam_main', 4);
   assert.deepEqual(first, second);
 
@@ -450,8 +452,7 @@ test('captureWorld renders real frames from the per-frame window.__viscraftWorld
       frames: 3,
       params: { marker: 'world' },
     });
-    const result = await captureWorld(root, source, browserWorld(), OUTPUT, destination);
-    assert.equal(typeof result.browserVersion, 'string');
+    await captureWorld(root, source, browserWorld(), OUTPUT, destination);
 
     // The author page validated each frame's world snapshot and rendered from the
     // sampled entity position; three global frames (1,2,3) give three shades.

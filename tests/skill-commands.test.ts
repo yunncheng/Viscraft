@@ -253,11 +253,15 @@ test('the video submission example contacts a service only after explicit invoca
     });
     await saveProject(root, project, project.revision);
     const args = [path.join(ROOT, 'tests/fixtures/authoring/produce-video-api.mjs'), root, 'clip', 'shot'];
-    await assert.rejects(run(process.execPath, args, { env, timeout: 15000, windowsHide: true }));
+    await assert.rejects(run(process.execPath, args, { env, timeout: 15000, windowsHide: true }), {
+      stderr: /Usage: .*--authorize/,
+    });
     assert.equal(requests.length, 0, 'without consent the example sends no HTTP request');
 
     // The same valid input with consent reaches the rejecting local service.
-    await assert.rejects(run(process.execPath, [...args, '--authorize'], { env, timeout: 15000, windowsHide: true }));
+    await assert.rejects(run(process.execPath, [...args, '--authorize'], { env, timeout: 15000, windowsHide: true }), {
+      stderr: /the service rejected the request/,
+    });
     assert.equal(requests.filter(method => method === 'POST').length, 1);
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));

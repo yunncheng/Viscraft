@@ -24,7 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { captureCode } from '../src/backends/browser/capture.js';
-import { emittedJsPath, isTypeScriptPath, transpileStagedTypeScript } from '../src/backends/browser/transpile.js';
+import { transpileStagedTypeScript } from '../src/backends/browser/transpile.js';
 import { buildProject, operationImplementation } from '../src/build/build.js';
 import type { BrowserPictureSource } from '../src/core/schema.js';
 
@@ -115,22 +115,11 @@ async function frameBuffers(destination: string): Promise<Buffer[]> {
   return Promise.all(files.map(file => fs.readFile(path.join(destination, file))));
 }
 
-test('emittedJsPath and isTypeScriptPath map staged TypeScript correctly', () => {
-  assert.equal(isTypeScriptPath('scene.ts'), true);
-  assert.equal(isTypeScriptPath('scenes/view.tsx'), true);
-  assert.equal(isTypeScriptPath('index.html'), false);
-  assert.equal(isTypeScriptPath('helper.js'), false);
-  assert.equal(emittedJsPath('scene.ts'), 'scene.js');
-  assert.equal(emittedJsPath('scenes/view.tsx'), 'scenes/view.js');
-  assert.equal(emittedJsPath('scenes/a.b.ts'), 'scenes/a.b.js');
-});
-
 test('a .ts entry importing a shared .ts module renders real frames', async () => {
   const root = await makeProject({ 'scene.ts': VALID_ENTRY, 'helper.ts': VALID_HELPER });
   const destination = await fs.mkdtemp(path.join(os.tmpdir(), 'viscraft-ts-out-'));
   try {
-    const result = await captureCode(root, codeSource(), OUTPUT, destination);
-    assert.match(result.browserVersion, /Chrome/);
+    await captureCode(root, codeSource(), OUTPUT, destination);
 
     const files = await frameFiles(destination);
     assert.deepEqual(files, ['frame-000000.png', 'frame-000001.png']);
@@ -309,13 +298,7 @@ test('.tsx is supported with a declared dependency-free h factory', async () => 
   const root = await makeProject({ 'scene.tsx': VALID_TSX_ENTRY });
   const destination = await fs.mkdtemp(path.join(os.tmpdir(), 'viscraft-tsx-out-'));
   try {
-    const result = await captureCode(
-      root,
-      codeSource({ entry: 'scene.tsx', resources: [], frames: 1 }),
-      OUTPUT,
-      destination,
-    );
-    assert.match(result.browserVersion, /Chrome/);
+    await captureCode(root, codeSource({ entry: 'scene.tsx', resources: [], frames: 1 }), OUTPUT, destination);
     assert.deepEqual(await frameFiles(destination), ['frame-000000.png']);
   } finally {
     await cleanup(root, destination);

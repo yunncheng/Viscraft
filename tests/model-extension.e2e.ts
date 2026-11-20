@@ -225,7 +225,7 @@ function options(root: string, state: Fixture, asset: Asset): VideoApiOptions {
 // protocol mismatches the lane is rejected before any job/request, while a
 // matching extension is accepted. The first half proves the mismatched-extensions
 // rejection; the second half proves the matching ones are accepted (the full
-// second-model proof lives in tests/runway.test.ts).
+// second-model proof lives in tests/runway-contracts.e2e.ts).
 for (const protocol of ['runway-v1', 'fal-queue'] as const) {
   test(`${protocol} rejects a mismatched extension in Plan, Build and direct execution before any job or request`, async () => {
     await fixture(async (root, state) => {
@@ -283,11 +283,12 @@ for (const protocol of ['runway-v1', 'fal-queue'] as const) {
       const plan = await planBuild(root, { providers: { videoApi: { default: config } } });
       assert.equal(plan.buildable, false);
       assert.ok(plan.blockers.some(issue => issue.code === 'model-request-invalid'));
-      assert.throws(() => validateVideoServiceRequest(source, config));
-      await assert.rejects(() => buildProject(root, { providers: { videoApi: { default: config } } }));
+      const mismatch = /does not match the selected protocol/;
+      assert.throws(() => validateVideoServiceRequest(source, config), mismatch);
+      await assert.rejects(() => buildProject(root, { providers: { videoApi: { default: config } } }), mismatch);
       const direct = protocol === 'runway-v1' ? generateRunway : generateFal;
       for (const generate of [generateVideoService, direct]) {
-        await assert.rejects(generate(root, source, OUTPUT, 'out.mp4', config), /does not match the selected protocol/);
+        await assert.rejects(generate(root, source, OUTPUT, 'out.mp4', config), mismatch);
       }
       assert.equal(handlerCalls, 0, 'a rejected binding must not partially execute handlers');
       assert.equal(state.requests, 0, 'the fixture must observe zero requests on every path');

@@ -294,7 +294,9 @@ test('reference video → measured graphic re-authoring → candidate selection 
       !privateManifest.files.some((file: { sha256: string }) => file.sha256 === ref.sha256),
       'private reference bytes must not enter delivery',
     );
-    await assert.rejects(access(join(privateDelivery, 'project', 'materials', 'reference-original.mp4')));
+    await assert.rejects(access(join(privateDelivery, 'project', 'materials', 'reference-original.mp4')), {
+      code: 'ENOENT',
+    });
     assert.ok((await buildProject(join(privateDelivery, 'project'))).operations.every(operation => operation.reused));
     await writeFile(
       join(fixture, 'verification.json'),

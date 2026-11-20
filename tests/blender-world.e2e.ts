@@ -250,7 +250,7 @@ async function makeWorldProject(): Promise<string> {
       sourcePath: gltfPath,
       type: 'model',
       rights: {
-        origin: 'original: authored by tests/blender-world.test.ts',
+        origin: 'original: authored by tests/blender-world.e2e.ts',
         license: 'CC0-1.0',
         redistributable: true,
       },

@@ -23,7 +23,6 @@ import { probeAudio } from '../src/backends/media/probe.js';
 import { ProjectSchema, TakeSchema } from '../src/core/schema.js';
 import { validateProject } from '../src/project/project.js';
 import { stableHash } from '../src/shared/hash.js';
-import { findBrowser } from '../src/backends/browser/capture.js';
 import { writeSignalAsset } from './audio-fixtures.js';
 import { runCommand } from '../src/shared/process.js';
 
@@ -395,8 +394,6 @@ test('a sound build reports its gaps and still refuses a consumed damaged Asset'
 });
 
 test('a 48 kHz sound Source is produced natively, then resampled into a 44.1 kHz target at the exact span', async () => {
-  const browser = await findBrowser().catch(() => undefined);
-  if (!browser) return; // real-browser evidence only when Chrome is installed
   const root = await mkdtemp(join(tmpdir(), 'viscraft-sound-resample-'));
   try {
     const sourceRate = 48000 as const;
@@ -450,10 +447,28 @@ window.viscraftSound = {
     assert.equal(take.sampleRate, sourceRate, 'the Take keeps the Source native rate');
 
     const artifact = record.artifacts.find(candidate => candidate.id === record.result!.artifact)!;
-    const media = await probeAudio(join(root, artifact.path));
+    const programme = join(root, artifact.path);
+    const media = await probeAudio(programme);
     assert.equal(media.sampleRate, targetRate, 'the delivered programme is at the target rate');
     assert.equal(media.channels, 2);
     assert.equal(media.samples, targetSamples, 'seconds are preserved, not stretched');
+
+    const decoded = join(root, 'programme.pcm');
+    await runCommand('ffmpeg', ['-v', 'error', '-i', programme, '-f', 's16le', decoded]);
+    const pcm = await readFile(decoded);
+    assert.equal(pcm.length, targetSamples * 2 * 2);
+    const start = Math.round(targetRate * 0.02);
+    const end = Math.round(targetRate * 0.18);
+    let crossings = 0;
+    let peak = 0;
+    for (let sample = start; sample < end; sample++) {
+      const left = pcm.readInt16LE(sample * 4);
+      peak = Math.max(peak, Math.abs(left));
+      if (pcm.readInt16LE((sample - 1) * 4) <= 0 && left > 0) crossings++;
+    }
+    assert.ok(peak > 6500 && peak < 9000, `expected the authored quarter-scale tone, got peak ${peak}`);
+    const expectedCrossings = (220 * (end - start)) / targetRate;
+    assert.ok(Math.abs(crossings - expectedCrossings) <= 1, `220 Hz tone had ${crossings} positive crossings`);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

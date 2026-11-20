@@ -174,8 +174,6 @@ test('scale-reveal: ordered and shuffled sampling yield identical camera samples
   for (const frame of shuffled) {
     assert.equal(JSON.stringify(camera.at(frame)), ordered.get(frame), `frame ${frame} must be order-independent`);
   }
-  // Re-sampling the same frame twice is bit-identical (no hidden state).
-  assert.equal(JSON.stringify(camera.at(48)), JSON.stringify(camera.at(48)));
 });
 
 // ---------------------------------------------------------------------------

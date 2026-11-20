@@ -210,7 +210,6 @@ test('pictogram-characters: the declared hand-off clock has one contact and one 
   assert.equal(overridden.transferFrame, 9);
   assert.equal(overridden.contact, true);
   assert.equal(pictogram.handoffAt(6, { frames: FRAMES }).contact, false);
-  assert.deepEqual(pictogram.handoffAt(7, { frames: FRAMES }), pictogram.handoffAt(7, { frames: FRAMES }));
 });
 
 // ---------------------------------------------------------------------------

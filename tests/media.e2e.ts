@@ -542,7 +542,12 @@ test('mixAudio throws instead of silently clipping an overloaded mix', async () 
 test('probeMedia propagates ffprobe failures instead of reporting silence', async () => {
   const dir = await tempDir();
   try {
-    await assert.rejects(() => probeMedia(nodePath.join(dir, 'missing.mp4')));
+    const clip = await makeClip(dir, 'probe.mp4', 1, 25, false);
+    const probed = await probeMedia(clip);
+    assert.equal(probed.frames, 25);
+    assert.equal(probed.audio, undefined);
+    await fs.unlink(clip);
+    await assert.rejects(() => probeMedia(clip), /ffprobe failed for .*probe\.mp4: ffprobe exited [1-9]/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -925,19 +930,16 @@ test('mixAudio skips a kept source that has no audio stream', async () => {
   }
 });
 
-test('mixAudio throws when a kept source is unreadable', async () => {
+test('mixAudio reports the missing kept source and publishes no WAV', async () => {
   const dir = await tempDir();
   try {
     const project = makeProject([placement('place_a', 0, 25, 0, 'keep')], []);
-    await assert.rejects(() =>
-      mixAudio(
-        dir,
-        project,
-        [{ path: nodePath.join(dir, 'nope.mp4'), startFrame: 0 }],
-        25,
-        nodePath.join(dir, 'x.wav'),
-      ),
+    const output = nodePath.join(dir, 'missing-input.wav');
+    await assert.rejects(
+      () => mixAudio(dir, project, [{ path: nodePath.join(dir, 'kept.mp4'), startFrame: 0 }], 25, output),
+      /ffprobe failed for .*kept\.mp4: ffprobe exited [1-9]/,
     );
+    await assert.rejects(fs.stat(output), { code: 'ENOENT' });
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

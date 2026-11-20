@@ -116,6 +116,12 @@ interface TarMember {
   prefix?: string;
 }
 
+interface ArchiveMutation {
+  name: string;
+  reason: RegExp | typeof SyntaxError;
+  tamper: (members: TarMember[]) => TarMember[] | void;
+}
+
 function writeOctal(header: Buffer, offset: number, length: number, value: number): void {
   const text = value
     .toString(8)
@@ -123,6 +129,12 @@ function writeOctal(header: Buffer, offset: number, length: number, value: numbe
     .slice(-(length - 1));
   header.write(text, offset, text.length, 'ascii');
   header[offset + length - 1] = 0;
+}
+function writeTarChecksum(header: Buffer): void {
+  header.fill(0x20, 148, 156);
+  let sum = 0;
+  for (const byte of header) sum += byte;
+  writeOctal(header, 148, 7, sum);
 }
 function tarHeader(member: TarMember): Buffer {
   const header = Buffer.alloc(512);
@@ -137,12 +149,7 @@ function tarHeader(member: TarMember): Buffer {
   header.write('ustar', 257, 5, 'ascii');
   header[262] = 0;
   header.write('00', 263, 2, 'ascii');
-  header.fill(0x20, 148, 156);
-  let sum = 0;
-  for (const byte of header) sum += byte;
-  header.write(sum.toString(8).padStart(6, '0'), 148, 6, 'ascii');
-  header[154] = 0;
-  header[155] = 0x20;
+  writeTarChecksum(header);
   return header;
 }
 function encodeTar(members: TarMember[]): Buffer {
@@ -200,6 +207,14 @@ function readManifest(members: TarMember[]): Record<string, any> {
 }
 function writeManifest(members: TarMember[], manifest: unknown): void {
   member(members, PORTABLE_MANIFEST).body = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+function appendDeclaredFile(members: TarMember[], name: string, body: Buffer, provenance: unknown): void {
+  members.push({ name, body });
+  const manifest = readManifest(members);
+  manifest.files.push({ path: name, bytes: body.length, sha256: sha256(body), provenance });
+  manifest.scope.counts.files = manifest.files.length;
+  writeManifest(members, manifest);
 }
 /** Keep the manifest honest after a member body is mutated (so ONLY the tested defence fires). */
 function refreshFileHash(members: TarMember[], target: string): void {
@@ -546,19 +561,22 @@ test('restoreProject rejects an unlisted, missing, duplicated or content-corrupt
     await archiveProject(root, archive);
     const bytes = await readFile(archive);
 
-    const cases: Array<{ name: string; tamper: (members: TarMember[]) => TarMember[] | void }> = [
+    const cases: ArchiveMutation[] = [
       {
         name: 'an unlisted extra member',
+        reason: /not declared by the manifest: evil\.txt/,
         tamper: members => {
           members.push({ name: 'evil.txt', body: Buffer.from('smuggled') });
         },
       },
       {
         name: 'a listed member removed',
+        reason: /missing portable manifest members/,
         tamper: members => members.filter(item => item.name !== 'scene.html'),
       },
       {
         name: 'a duplicated member',
+        reason: /duplicate path: scene\.html/,
         tamper: members => {
           const entry = member(members, 'scene.html');
           members.push({ name: entry.name, body: Buffer.from(entry.body) });
@@ -566,8 +584,9 @@ test('restoreProject rejects an unlisted, missing, duplicated or content-corrupt
       },
       {
         name: 'a corrupt member body',
+        reason: /mismatched hash: scene\.html/,
         tamper: members => {
-          member(members, 'scene.html').body = Buffer.from('<html>tampered</html>');
+          member(members, 'scene.html').body[0] ^= 1;
         },
       },
     ];
@@ -578,7 +597,7 @@ test('restoreProject rejects an unlisted, missing, duplicated or content-corrupt
         rearchive(bytes, item.tamper),
       );
       const destination = path.join(staging, `out-${index}`);
-      await assert.rejects(restoreProject(hostile, destination), /./, `expected ${item.name} to be rejected`);
+      await assert.rejects(restoreProject(hostile, destination), item.reason, item.name);
       assert.equal(
         await stat(destination).then(
           () => true,
@@ -605,9 +624,10 @@ test('restoreProject rejects forged provenance, self-declared credential/scratch
     await archiveProject(root, archive);
     const bytes = await readFile(archive);
 
-    const cases: Array<{ name: string; tamper: (members: TarMember[]) => TarMember[] | void }> = [
+    const cases: ArchiveMutation[] = [
       {
         name: 'a forged file provenance',
+        reason: /actual authored and production dependency closure/,
         tamper: members => {
           const manifest = readManifest(members);
           manifest.files.find((file: { path: string }) => file.path === 'scene.html').provenance = { kind: 'project' };
@@ -616,55 +636,45 @@ test('restoreProject rejects forged provenance, self-declared credential/scratch
       },
       {
         name: 'a self-declared credential file',
-        tamper: members => {
-          const body = Buffer.from('API_KEY=leak');
-          members.push({ name: '.env', body });
-          const manifest = readManifest(members);
-          manifest.files.push({
-            path: '.env',
-            sha256: sha256(body),
-            provenance: { kind: 'source', sourceId: 'src', role: 'resource' },
-          });
-          writeManifest(members, manifest);
-        },
+        reason: /actual authored and production dependency closure|credential file/i,
+        tamper: members =>
+          appendDeclaredFile(members, '.env', Buffer.from('API_KEY=leak'), {
+            kind: 'source',
+            sourceId: 'src',
+            role: 'resource',
+          }),
       },
       {
         name: 'a self-declared runtime scratch file',
-        tamper: members => {
-          const body = Buffer.from('scratch');
-          members.push({ name: '.viscraft/scratch/state.bin', body });
-          const manifest = readManifest(members);
-          manifest.files.push({
-            path: '.viscraft/scratch/state.bin',
-            sha256: sha256(body),
-            provenance: { kind: 'source', sourceId: 'src', role: 'resource' },
-          });
-          writeManifest(members, manifest);
-        },
+        reason: /actual authored and production dependency closure|runtime-private/i,
+        tamper: members =>
+          appendDeclaredFile(members, '.viscraft/scratch/state.bin', Buffer.from('scratch'), {
+            kind: 'source',
+            sourceId: 'src',
+            role: 'resource',
+          }),
       },
       {
         name: 'an invalid extra Build record the reader would prune',
+        reason: /actual authored and production dependency closure|invalid Build record/i,
         tamper: members => {
-          const body = Buffer.from('{ this is not a valid build record');
-          const relative = `.viscraft/builds/build-${'9'.repeat(36)}.json`;
-          members.push({ name: relative, body });
-          const manifest = readManifest(members);
-          manifest.files.push({
-            path: relative,
-            sha256: sha256(body),
-            provenance: { kind: 'build', buildId: `build-${'9'.repeat(36)}` },
+          const buildId = `build-${'9'.repeat(36)}`;
+          appendDeclaredFile(members, `.viscraft/builds/${buildId}.json`, Buffer.from('{ bad build JSON'), {
+            kind: 'build',
+            buildId,
           });
-          writeManifest(members, manifest);
         },
       },
       {
         name: 'a corrupt manifest (invalid JSON)',
+        reason: SyntaxError,
         tamper: members => {
           member(members, PORTABLE_MANIFEST).body = Buffer.from('{ this is not a valid portable manifest');
         },
       },
       {
         name: 'an unknown manifest field',
+        reason: /unknownInjectedField/,
         tamper: members => {
           const manifest = readManifest(members);
           manifest.unknownInjectedField = true;
@@ -673,6 +683,7 @@ test('restoreProject rejects forged provenance, self-declared credential/scratch
       },
       {
         name: 'a forged but well-formed source-role provenance',
+        reason: /actual authored and production dependency closure/,
         tamper: members => {
           const manifest = readManifest(members);
           manifest.files.find((file: { path: string }) => file.path === 'lib/util.js').provenance = {
@@ -691,7 +702,7 @@ test('restoreProject rejects forged provenance, self-declared credential/scratch
         rearchive(bytes, item.tamper),
       );
       const destination = path.join(staging, `out-${index}`);
-      await assert.rejects(restoreProject(hostile, destination), /./, `expected ${item.name} to be rejected`);
+      await assert.rejects(restoreProject(hostile, destination), item.reason, item.name);
       assert.equal(
         await stat(destination).then(
           () => true,
@@ -712,7 +723,7 @@ test('restoreProject rejects forged provenance, self-declared credential/scratch
 // 3. v1 deduplicated frozen Asset trust boundary
 // ---------------------------------------------------------------------------
 
-test('a v1 lineage archive restores, and rejections cover unused mappings, undeclared blobs and corrupt/missing blobs', async () => {
+test('a v1 lineage archive restores and refuses unused mappings, unreferenced blobs and corrupt or missing blobs', async () => {
   const root = await tmp();
   const parent = await tmp();
   const staging = await tmp();
@@ -748,9 +759,10 @@ test('a v1 lineage archive restores, and rejections cover unused mappings, undec
       sha256(Buffer.from('fake-simulated-mp4-bytes')),
     );
 
-    const cases: Array<{ name: string; tamper: (members: TarMember[]) => TarMember[] | void }> = [
+    const cases: ArchiveMutation[] = [
       {
         name: 'an unused extra snapshot-asset mapping',
+        reason: /actual authored and production dependency closure/,
         tamper: members => {
           const next = readManifest(members);
           next.snapshotAssets.push({
@@ -763,24 +775,24 @@ test('a v1 lineage archive restores, and rejections cover unused mappings, undec
         },
       },
       {
-        name: 'an undeclared content blob',
+        name: 'an unreferenced content blob',
+        reason: /unreferenced frozen Asset blob/,
         tamper: members => {
           const body = Buffer.from('unreferenced blob');
           const relative = `.viscraft/content/${sha256(body)}`;
-          members.push({ name: relative, body });
-          const next = readManifest(members);
-          next.files.push({ path: relative, sha256: sha256(body), provenance: { kind: 'snapshot-content' } });
-          writeManifest(members, next);
+          appendDeclaredFile(members, relative, body, { kind: 'snapshot-content' });
         },
       },
       {
         name: 'a corrupt content blob',
+        reason: /mismatched hash: \.viscraft\/content\//,
         tamper: members => {
-          member(members, blob).body = Buffer.from('corrupted blob bytes');
+          member(members, blob).body[0] ^= 1;
         },
       },
       {
         name: 'a missing content blob',
+        reason: /missing portable manifest members/,
         tamper: members => members.filter(item => item.name !== blob),
       },
     ];
@@ -791,7 +803,7 @@ test('a v1 lineage archive restores, and rejections cover unused mappings, undec
         rearchive(bytes, item.tamper),
       );
       const target = path.join(staging, `out-${index}`);
-      await assert.rejects(restoreProject(hostile, target), /./, `expected ${item.name} to be rejected`);
+      await assert.rejects(restoreProject(hostile, target), item.reason, item.name);
       assert.equal(
         await stat(target).then(
           () => true,
@@ -827,9 +839,10 @@ test('restoreProject rejects a rights or simulated provenance mismatch between t
     await archiveProject(root, archive);
     const bytes = await readFile(archive);
 
-    const cases: Array<{ name: string; tamper: (members: TarMember[]) => TarMember[] | void }> = [
+    const cases: ArchiveMutation[] = [
       {
         name: 'a frozen Asset simulated flag flip',
+        reason: /mapping provenance does not match the frozen Asset/,
         tamper: members => {
           const manifest = readManifest(members);
           manifest.snapshotAssets[0].provenance.simulated = true;
@@ -838,6 +851,7 @@ test('restoreProject rejects a rights or simulated provenance mismatch between t
       },
       {
         name: 'a frozen Asset rights change',
+        reason: /mapping provenance does not match the frozen Asset/,
         tamper: members => {
           const manifest = readManifest(members);
           manifest.snapshotAssets[0].provenance.rights.license = 'forged-license';
@@ -846,6 +860,7 @@ test('restoreProject rejects a rights or simulated provenance mismatch between t
       },
       {
         name: 'a package-level simulated flag flip',
+        reason: /simulated must be true when any carried Asset or Artifact is simulated/,
         tamper: members => {
           const manifest = readManifest(members);
           manifest.simulated = false;
@@ -854,6 +869,7 @@ test('restoreProject rejects a rights or simulated provenance mismatch between t
       },
       {
         name: 'a forged but well-formed artifact provenance',
+        reason: /actual authored and production dependency closure/,
         tamper: members => {
           const manifest = readManifest(members);
           const artifactFile = manifest.files.find((file: { path: string }) => file.path === ARTIFACT_REL);
@@ -875,7 +891,7 @@ test('restoreProject rejects a rights or simulated provenance mismatch between t
         rearchive(bytes, item.tamper),
       );
       const target = path.join(staging, `out-${index}`);
-      await assert.rejects(restoreProject(hostile, target), /./, `expected ${item.name} to be rejected`);
+      await assert.rejects(restoreProject(hostile, target), item.reason, item.name);
     }
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -903,46 +919,57 @@ test('restoreProject rejects framing faults: truncation, bad checksum/magic/vers
     const firstSize = Number.parseInt(cstr(raw.subarray(124, 136), 0, 12).trim(), 8);
     const secondHeader = 512 + Math.ceil(firstSize / 512) * 512;
 
-    const mutations: Array<{ name: string; bytes: Buffer }> = [];
-    mutations.push({ name: 'a truncated gzip stream', bytes: gzipBytes.subarray(0, Math.floor(gzipBytes.length / 2)) });
-    mutations.push({ name: 'a truncated decoded stream', bytes: gzipSync(raw.subarray(0, secondHeader + 8)) });
+    const mutations: Array<{ name: string; bytes: Buffer; error: RegExp }> = [];
+    mutations.push({
+      name: 'a truncated gzip stream',
+      bytes: gzipBytes.subarray(0, Math.floor(gzipBytes.length / 2)),
+      error: /unexpected end of file/i,
+    });
+    mutations.push({
+      name: 'a truncated decoded stream',
+      bytes: gzipSync(raw.subarray(0, secondHeader + 8)),
+      error: /archive is truncated/i,
+    });
 
     const badChecksum = Buffer.from(raw);
     badChecksum[secondHeader] = badChecksum[secondHeader] === 0x7a ? 0x7b : 0x7a;
-    mutations.push({ name: 'a bad header checksum', bytes: gzipSync(badChecksum) });
+    mutations.push({ name: 'a bad header checksum', bytes: gzipSync(badChecksum), error: /header checksum mismatch/ });
 
-    const badMagic = Buffer.from(raw);
-    badMagic.write('bad!!', secondHeader + 257, 'ascii');
-    mutations.push({ name: 'a bad USTAR magic', bytes: gzipSync(badMagic) });
-
-    const badVersion = Buffer.from(raw);
-    badVersion.write('xx', secondHeader + 263, 'ascii');
-    mutations.push({ name: 'a bad USTAR version', bytes: gzipSync(badVersion) });
-
-    const oversized = Buffer.from(raw);
-    oversized.write('77777777777', secondHeader + 124, 'ascii');
-    mutations.push({ name: 'an oversized declared member size', bytes: gzipSync(oversized) });
-
-    const nonEmptyLink = Buffer.from(raw);
-    nonEmptyLink.write('target', secondHeader + 157, 'ascii');
-    mutations.push({ name: 'a non-empty linkname on a regular file', bytes: gzipSync(nonEmptyLink) });
-
-    if (firstSize % 512 !== 0) {
-      const dirtyPadding = Buffer.from(raw);
-      dirtyPadding[512 + firstSize] = 0x41;
-      mutations.push({ name: 'non-zero header padding', bytes: gzipSync(dirtyPadding) });
+    // The checksum stays valid so each field reaches its own guard.
+    for (const { name, offset, value, error } of [
+      { name: 'a bad USTAR magic', offset: 257, value: 'bad!!', error: /not a strict USTAR entry/ },
+      { name: 'a bad USTAR version', offset: 263, value: 'xx', error: /unsupported USTAR version/ },
+      { name: 'an oversized member', offset: 124, value: '77777777777', error: /member exceeds its size limit/ },
+      { name: 'a non-empty link name', offset: 157, value: 'target', error: /unexpectedly carries a link name/ },
+    ]) {
+      const changed = Buffer.from(raw);
+      const header = changed.subarray(secondHeader, secondHeader + 512);
+      header.write(value, offset, 'ascii');
+      writeTarChecksum(header);
+      mutations.push({ name, bytes: gzipSync(changed), error });
     }
 
-    mutations.push({ name: 'missing terminating zero blocks', bytes: gzipSync(raw.subarray(0, raw.length - 1024)) });
+    assert.notEqual(firstSize % 512, 0, 'the fixture manifest must have padding');
+    const dirtyPadding = Buffer.from(raw);
+    dirtyPadding[512 + firstSize] = 0x41;
+    mutations.push({ name: 'non-zero member padding', bytes: gzipSync(dirtyPadding), error: /non-zero padding/ });
+
+    mutations.push({
+      name: 'missing terminating zero blocks',
+      bytes: gzipSync(raw.subarray(0, raw.length - 1024)),
+      error: /archive is truncated/i,
+    });
     mutations.push({
       name: 'trailing decoded bytes after the end blocks',
-      bytes: gzipSync(Buffer.concat([raw, Buffer.alloc(512, 0x41)])),
+      bytes: gzipSync(Buffer.concat([raw, Buffer.from('trailing')])),
+      error: /decoded content after the end-of-archive marker/,
     });
 
     for (const [index, mutation] of mutations.entries()) {
       const hostile = await writeArchive(path.join(staging, `hostile-${index}.viscraft-archive`), mutation.bytes);
       const target = path.join(staging, `out-${index}`);
-      await assert.rejects(restoreProject(hostile, target), /./, `expected ${mutation.name} to be rejected`);
+      await assert.rejects(restoreProject(hostile, target), mutation.error, mutation.name);
+      await assert.rejects(stat(target), { code: 'ENOENT' }, mutation.name);
     }
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -983,6 +1010,7 @@ test('restoreProject refuses an unsupported manifest tar and non-regular or trav
         await writeArchive(path.join(staging, 'dir.viscraft-archive'), asDirectory),
         path.join(staging, 'dir-out'),
       ),
+      /not a regular file/,
     );
 
     const asSymlink = rearchive(bytes, members => {
@@ -993,6 +1021,7 @@ test('restoreProject refuses an unsupported manifest tar and non-regular or trav
         await writeArchive(path.join(staging, 'link.viscraft-archive'), asSymlink),
         path.join(staging, 'link-out'),
       ),
+      /not a regular file/,
     );
 
     const traversal = rearchive(bytes, members => {
@@ -1003,6 +1032,7 @@ test('restoreProject refuses an unsupported manifest tar and non-regular or trav
         await writeArchive(path.join(staging, 'trav.viscraft-archive'), traversal),
         path.join(staging, 'trav-out'),
       ),
+      /expected a safe project-relative path/i,
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -1107,7 +1137,7 @@ test('archiveProject preserves long UTF-8 paths by USTAR prefix splitting and re
   try {
     // Total > 100 bytes, each component <= 100 bytes and the prefix <= 155 bytes:
     // must be representable by name/prefix splitting, never truncated.
-    const splittable = `${'d'.repeat(60)}/${'n'.repeat(60)}.js`;
+    const splittable = `${'画'.repeat(20)}/${'n'.repeat(60)}.js`;
     await authorCodeProject(root, [splittable], 'archive-longpath');
     const archive = path.join(parent, 'long.viscraft-archive');
     await archiveProject(root, archive);
@@ -1125,7 +1155,7 @@ test('archiveProject preserves long UTF-8 paths by USTAR prefix splitting and re
     const unrepresentable = `${'x'.repeat(120)}.js`;
     await authorCodeProject(root2, [unrepresentable], 'archive-toolong');
     const rejectedArchive = path.join(parent, 'toolong.viscraft-archive');
-    await assert.rejects(archiveProject(root2, rejectedArchive));
+    await assert.rejects(archiveProject(root2, rejectedArchive), /cannot be represented in a strict USTAR header/);
     assert.equal(
       await stat(rejectedArchive).then(
         () => true,

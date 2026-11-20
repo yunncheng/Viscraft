@@ -298,14 +298,15 @@ test('status: running writer locks are reported and status is zero-write', async
   }
 });
 
-test('status: untracked and modified files appear in the git working-tree summary', async () => {
+test('status: untracked and modified files appear in the git working-tree summary', async t => {
   const root = await mkdtemp(join(tmpdir(), 'viscraft-status-'));
   try {
-    const project = await makeProject(root);
+    await makeProject(root);
     try {
       await runCommand('git', ['-C', root, 'init', '--quiet']);
-    } catch {
-      return; // git unavailable: the summary correctly reports `unavailable`; no assertion to make.
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return t.skip('git is not installed');
+      throw error;
     }
     // An untracked author file, and a modification to a tracked one.
     await writeFile(join(root, 'notes.txt'), 'draft\n');
@@ -322,7 +323,6 @@ test('status: untracked and modified files appear in the git working-tree summar
       !status.git.paths.some(path => path.startsWith('.viscraft') || path.startsWith('output')),
       'the Runtime-owned directories do not appear in the summary',
     );
-    void project;
   } finally {
     await rm(root, { recursive: true, force: true });
   }

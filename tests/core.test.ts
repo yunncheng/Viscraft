@@ -8,16 +8,25 @@ import { framesToSamples, ptsToFrames } from '../src/core/time.js';
 import { resolveProjectPath } from '../src/shared/fs.js';
 import { stableHash } from '../src/shared/hash.js';
 import { redact } from '../src/shared/process.js';
-import { RelativePath, type Project } from '../src/core/schema.js';
+import { LookGradeSchema, RelativePath, type Project } from '../src/core/schema.js';
 import { acquireLock, validateProject } from '../src/project/project.js';
 import { hostname } from 'node:os';
+
+test('Look grades preserve explicit settings and reject unusable or unsupported inputs', () => {
+  assert.deepEqual(LookGradeSchema.parse({ gamma: 1.2 }), { gamma: 1.2 });
+  assert.throws(() => LookGradeSchema.parse({ gamma: 0 }), /gamma/);
+  assert.throws(() => LookGradeSchema.parse({ lut: 'unsupported.cube' }), /lut/);
+});
 
 test('shared rational clock quantizes half upward and preserves long boundaries', () => {
   assert.equal(framesToSamples(1, { numerator: 2, denominator: 1 }, 1), 1);
   assert.equal(framesToSamples(1, { numerator: 2, denominator: 1 }, 1, 'floor'), 0);
   assert.equal(framesToSamples(30000, { numerator: 30000, denominator: 1001 }, 48000), 48_048_000);
   assert.equal(framesToSamples(1, { numerator: 30000, denominator: 1001 }, 48000, 'ceil'), 1602);
-  assert.throws(() => framesToSamples(Number.MAX_SAFE_INTEGER, { numerator: 1, denominator: 1 }, 48000));
+  assert.throws(
+    () => framesToSamples(Number.MAX_SAFE_INTEGER, { numerator: 1, denominator: 1 }, 48000),
+    /sample position exceeds safe integer range/i,
+  );
 });
 test('source PTS mapping subtracts a shared origin and rounds rational boundaries half up', () => {
   assert.equal(ptsToFrames('105', '100', { numerator: 1, denominator: 300 }, { numerator: 30, denominator: 1 }), 1);

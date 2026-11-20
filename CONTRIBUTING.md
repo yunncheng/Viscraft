@@ -36,12 +36,14 @@ programs to their consuming tests and maintenance invariants.
 
 Tests should protect observable Runtime, CLI, Skill or distribution contracts.
 Use a concrete failing input and an independent expected result; keep valid
-baselines when testing rejection. Prefer shared fixtures over a new example for
-each regression. Validate fixture inputs when the integration test needs that
-assurance; avoid separate suites that only pin a fixture's private algorithms
-or artistic choices. Tie prose checks to documented contracts rather than exact
-editorial wording. Preserve checks for source rights,
-resource closure, real output, edits and recovery in shipped references.
+baselines when testing rejection. Put isolated logic in `*.test.ts` and paths
+that launch browsers, Blender, media tools or a complete Build in `*.e2e.ts`.
+Use one representative fixture per shared failure path and keep a separate
+case when a consumer adds a distinct contract. For rendered media, assert the
+actual frames, timestamps or samples. Tie prose checks to documented contracts
+and use measured output to verify a study's creative mechanism. Preserve checks
+for source rights, resource closure, real output, edits and recovery in shipped
+references.
 Run the same contracts on Linux, Windows and macOS; report unavailable optional
 tools or platform privileges as explicit skips, never as passes.
 

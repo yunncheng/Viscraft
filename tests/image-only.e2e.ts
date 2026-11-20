@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { imageRenderIdentity, renderImage } from '../src/build/image.js';
 import { validateProject } from '../src/project/project.js';
+import { runCommand } from '../src/shared/process.js';
 
 const DOC = `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="poster.css"></head>
 <body><div id="card"><h1>STILL ONLY</h1><p>no film timeline</p></div></body></html>`;
@@ -64,7 +65,19 @@ async function makeImageProject(): Promise<{ parent: string; root: string }> {
   return { parent, root };
 }
 
-test('an image-only Project renders and reuses its still without a film', async () => {
+async function readStillPixels(root: string, artifact: string, destination: string): Promise<Buffer> {
+  const input = join(root, ...artifact.split('/'));
+  const png = await readFile(input);
+  assert.equal(png.toString('ascii', 1, 4), 'PNG');
+  assert.equal(png.readUInt32BE(16), 240);
+  assert.equal(png.readUInt32BE(20), 160);
+  await runCommand('ffmpeg', ['-v', 'error', '-i', input, '-pix_fmt', 'rgb24', '-f', 'rawvideo', destination]);
+  const pixels = await readFile(destination);
+  assert.equal(pixels.length, 240 * 160 * 3);
+  return pixels;
+}
+
+test('a film-free Project reuses the recorded still and paints different pixels after an edit', async () => {
   const { parent, root } = await makeImageProject();
   try {
     await writeFile(join(root, 'poster.html'), DOC);
@@ -76,6 +89,9 @@ test('an image-only Project renders and reuses its still without a film', async 
     assert.equal(first.width, 240);
     assert.equal(first.height, 160);
     assert.equal(first.format, 'png');
+    const originalPixels = await readStillPixels(root, first.path, join(parent, 'before.rgb'));
+    const background = (140 * 240 + 220) * 3;
+    assert.deepEqual([...originalPixels.subarray(background, background + 3)], [239, 231, 216]);
 
     const record = JSON.parse(await readFile(join(root, '.viscraft', 'builds', `${first.build}.json`), 'utf8')) as {
       target?: string;
@@ -119,6 +135,13 @@ test('an image-only Project renders and reuses its still without a film', async 
       if (previous === undefined) delete process.env.VISCRAFT_BROWSER;
       else process.env.VISCRAFT_BROWSER = previous;
     }
+
+    await writeFile(join(root, 'poster.html'), DOC.replace('<body>', '<body style="background:#25406c">'));
+    const edited = await renderImage(root, { target: 'card' });
+    assert.equal(edited.reused, false);
+    assert.notEqual(edited.artifact, first.artifact);
+    const editedPixels = await readStillPixels(root, edited.path, join(parent, 'after.rgb'));
+    assert.deepEqual([...editedPixels.subarray(background, background + 3)], [37, 64, 108]);
   } finally {
     await rm(parent, { recursive: true, force: true });
   }
@@ -153,7 +176,7 @@ test('an unrelated missing Asset is an explicit gap, not a blocked still', async
   }
 });
 
-test('a changed consumed resource is rejected instead of rendering old bytes', async () => {
+test('editing a consumed stylesheet invalidates the recorded still', async () => {
   const { parent, root } = await makeImageProject();
   try {
     await writeFile(join(root, 'poster.html'), DOC);

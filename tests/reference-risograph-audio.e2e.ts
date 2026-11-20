@@ -37,6 +37,7 @@ import { verifyDelivery } from '../src/operations/delivery/delivery-verification
 import { loadProject } from '../src/project/project.js';
 import type { Composition } from '../src/core/schema.js';
 import { authorRecipe, sha256 } from './authoring-helpers.js';
+import { toneMagnitude } from './audio-fixtures.js';
 
 const STUDY_DIR = resolve('skills/viscraft/assets/studies/code-visuals/risograph');
 const RECIPE = join(STUDY_DIR, 'create.mjs');
@@ -131,20 +132,6 @@ function rmsBetween(wav: DecodedWav, start: number, end: number): number {
     }
   }
   return Math.sqrt(sum / Math.max(1, count));
-}
-
-/** Single-bin Goertzel magnitude at `frequency` in a window (mono average). */
-function bandMagnitude(wav: DecodedWav, start: number, end: number, frequency: number): number {
-  const [from, to] = window(wav, start, end);
-  const step = (2 * Math.PI * frequency) / wav.sampleRate;
-  let real = 0;
-  let imag = 0;
-  for (let i = from; i < to; i++) {
-    const value = (wav.data[0][i] + wav.data[1][i]) / 2;
-    real += value * Math.cos(step * i);
-    imag += value * Math.sin(step * i);
-  }
-  return Math.hypot(real, imag) / Math.max(1, to - from);
 }
 
 function samplesEqual(a: DecodedWav, b: DecodedWav): boolean {
@@ -373,25 +360,24 @@ test('risograph: the authored music and Foley sources carry the real action even
     for (const source of music) {
       const name = source.id.startsWith('river') ? 'riverside' : 'bakery';
       const wav = decodeWav(await readFile(join(parent, `${source.id}.wav`)));
-      const guitarBefore = bandMagnitude(wav, 0.6, 0.74, 185);
-      const guitarAfter = bandMagnitude(wav, 0.76, 0.9, 185);
+      const guitarBefore = toneMagnitude(wav, 0.6, 0.74, 185);
+      const guitarAfter = toneMagnitude(wav, 0.76, 0.9, 185);
       assert.ok(
         guitarAfter > guitarBefore * 5,
         `${name}: the guitar fundamental enters at 0.75 (${guitarBefore} → ${guitarAfter})`,
       );
-      const vibeBefore = bandMagnitude(wav, 1.35, 1.49, 440);
-      const vibeAfter = bandMagnitude(wav, 1.51, 1.65, 440);
+      const vibeBefore = toneMagnitude(wav, 1.35, 1.49, 440);
+      const vibeAfter = toneMagnitude(wav, 1.51, 1.65, 440);
       assert.ok(
         vibeAfter > vibeBefore * 5,
         `${name}: the vibes fundamental enters at 1.5 (${vibeBefore} → ${vibeAfter})`,
       );
-      assert.ok(bandMagnitude(wav, 0.05, 0.25, 73.4) > 0.0005, `${name}: the bass is present at the blue opening`);
+      assert.ok(toneMagnitude(wav, 0.05, 0.25, 73.4) > 0.0005, `${name}: the bass is present at the blue opening`);
       assert.ok(rmsBetween(wav, 0, 0.7) > 0.01, `${name}: the opening is a real cue, not silence`);
       assert.ok(rmsBetween(wav, 2.7, 3.5) > 0.01, `${name}: the answer after the action remains music`);
       assert.ok(
         rmsBetween(wav, 2.35, 2.55) < rmsBetween(wav, 2.0, 2.3) * 0.6,
-        `${name}: the action window is quieter than the preceding passage (observation only; ` +
-          'the causal duck ablation is the independent-copy unit test)',
+        `${name}: the action window is quieter than the preceding passage`,
       );
     }
 

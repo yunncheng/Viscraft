@@ -269,7 +269,10 @@ test('ambiguous submit remains submit-unknown and cannot be retried implicitly',
   await fixture(async (f, root) => {
     f.rejectSubmit = true;
     const options = { testOnly: { baseUrl: f.baseUrl } };
-    await assert.rejects(() => generateVideoApi(root, source('unknown'), OUTPUT, 'build/take.mp4', options));
+    await assert.rejects(
+      () => generateVideoApi(root, source('unknown'), OUTPUT, 'build/take.mp4', options),
+      /submit outcome .* is unknown/i,
+    );
     assert.equal(((await videoApiStatus(root))[0] as Record<string, unknown>).state, 'submit-unknown');
     f.rejectSubmit = false;
     await assert.rejects(
@@ -285,7 +288,13 @@ test('download failure resumes content retrieval without requerying or regenerat
   await fixture(async (f, root) => {
     f.failDownload = true;
     const options = { testOnly: { baseUrl: f.baseUrl } };
-    await assert.rejects(() => generateVideoApi(root, source('download'), OUTPUT, 'build/take.mp4', options));
+    await assert.rejects(
+      () => generateVideoApi(root, source('download'), OUTPUT, 'build/take.mp4', options),
+      /media download failed for attempt 'download'/i,
+    );
+    const [job] = (await videoApiStatus(root)) as Array<{ state: string }>;
+    assert.equal(job?.state, 'download-failed');
+    assert.equal(f.downloads, 1);
     await generateVideoApi(root, source('download'), OUTPUT, 'build/take.mp4', options);
     assert.equal(f.posts, 1);
     assert.equal(f.gets, 1);

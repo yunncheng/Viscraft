@@ -500,10 +500,9 @@ test('the foreground-sprite example refuses malformed, non-finite, mismatched, n
       configPath: string,
       outDir: string,
       stageRoot: string,
-      matcher?: RegExp,
+      matcher: RegExp,
     ): Promise<void> => {
-      const promise = runSprite(outDir, configPath);
-      await (matcher ? assert.rejects(promise, matcher) : assert.rejects(promise));
+      await assert.rejects(runSprite(outDir, configPath), matcher, name);
       assert.equal(await exists(outDir), false, `${name}: no output directory may be created`);
       await assertNoStaging(stageRoot, name);
     };
@@ -540,9 +539,15 @@ test('the foreground-sprite example refuses malformed, non-finite, mismatched, n
       extraction: { kind: 'key', color: '#00ff00', similarity: 0.5, blend: -0.1 },
       rights: RIGHTS,
     });
-    await rejectsRun('blend -0.1', join(fixtures, 'e.json'), join(root, 'out-e'), root);
+    await rejectsRun(
+      'blend -0.1',
+      join(fixtures, 'e.json'),
+      join(root, 'out-e'),
+      root,
+      /"path":\s*\[\s*"extraction",\s*"blend"\s*\][\s\S]*?greater than or equal to 0/,
+    );
 
-    // (f..g) non-finite JSON numbers (1e999 parses to Infinity).
+    // (f) A JSON number can overflow to Infinity during parsing.
     await writeFile(
       join(fixtures, 'f.json'),
       `{
@@ -552,17 +557,13 @@ test('the foreground-sprite example refuses malformed, non-finite, mismatched, n
     }`,
       'utf8',
     );
-    await rejectsRun('Infinity similarity', join(fixtures, 'f.json'), join(root, 'out-f'), root);
-    await writeFile(
-      join(fixtures, 'g.json'),
-      `{
-      "input": { "path": "input.png", "rights": ${JSON.stringify(RIGHTS)} },
-      "extraction": { "kind": "key", "color": "#00ff00", "similarity": 0.5, "blend": -1e999 },
-      "rights": ${JSON.stringify(RIGHTS)}
-    }`,
-      'utf8',
+    await rejectsRun(
+      'Infinity similarity',
+      join(fixtures, 'f.json'),
+      join(root, 'out-f'),
+      root,
+      /"path":\s*\[\s*"extraction",\s*"similarity"\s*\]/,
     );
-    await rejectsRun('negative Infinity blend', join(fixtures, 'g.json'), join(root, 'out-g'), root);
 
     // (h) mask dimensions that do not match the input (never silently scaled).
     await writeJson(join(fixtures, 'h.json'), maskConfig('maskSmall.png'));

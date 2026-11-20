@@ -1199,7 +1199,16 @@ export const CompositionSchema = z
     }
     const beats = composition.beats ?? [];
     const totalFrames = composition.outputFrames ?? contentFrames;
-    const totalSamples = framesToSamples(totalFrames, composition.output.fps, composition.output.sampleRate, 'ceil');
+    let totalSamples: number;
+    try {
+      totalSamples = framesToSamples(totalFrames, composition.output.fps, composition.output.sampleRate, 'ceil');
+    } catch (error) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
     const ids = new Set<string>();
     for (let index = 0; index < beats.length; index++) {
       const beat = beats[index];

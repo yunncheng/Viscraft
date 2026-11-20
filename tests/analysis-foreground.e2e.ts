@@ -305,7 +305,10 @@ test('analyzeReferenceForeground fails loudly before decoding an over-long clip 
 
     // A non-media file must fail loudly, not produce an empty report.
     await fs.writeFile(nodePath.join(refs, 'notes.txt'), 'not a video\n');
-    await assert.rejects(() => analyzeReferenceForeground(root, 'refs/notes.txt', {}));
+    await assert.rejects(
+      () => analyzeReferenceForeground(root, 'refs/notes.txt', {}),
+      /ffprobe failed for .*notes\.txt: ffprobe exited [1-9]/,
+    );
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

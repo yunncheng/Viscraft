@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { buildProject } from '../src/build/build.js';
 import { exportProject } from '../src/operations/delivery/portable.js';
 import { loadProject, saveProject, validateProject } from '../src/project/project.js';
-import { LookGradeSchema, type Project } from '../src/core/schema.js';
+import type { Project } from '../src/core/schema.js';
 import { hashFile } from '../src/shared/hash.js';
 import { runCommand } from '../src/shared/process.js';
 
@@ -190,10 +190,6 @@ test('named Look grades Code and kept-audio media pictures, edits selectively an
     await buildProject(root);
     await exportProject(root, exported);
     assert((await buildProject(exported)).operations.every(operation => operation.reused));
-    assert.deepEqual(LookGradeSchema.parse({}), {});
-    assert.throws(() => LookGradeSchema.parse({ gamma: 0 }));
-    assert.throws(() => LookGradeSchema.parse({ brightness: Infinity }));
-    assert.throws(() => LookGradeSchema.parse({ lut: 'unknown.cube' }));
     const active = await readFile(join(exported, '.viscraft/result.json'), 'utf8');
     const broken = await loadProject(exported);
     broken.composition!.placements[0].outFrame = 999;

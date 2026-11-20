@@ -6,7 +6,7 @@
  * backends, and the vendored three.js file list the page loads.
  *
  * Imported by `tests/fixtures/authoring/mesh/render.mjs` (evidence) and
- * `tests/browser-mesh.test.ts` (contract), so the Asset bytes, the World and the
+ * `tests/browser-mesh.e2e.ts` (contract), so the Asset bytes, the World and the
  * expected mesh facts have a single definition.
  */
 

@@ -524,7 +524,7 @@ test('the cutout example rejects malformed configs, taints simulated sprites and
         shots: oneShot,
       }),
     );
-    await assert.rejects(runCutout(svgDir, svgConfig), 'the example must reject an unsupported SVG image');
+    await assert.rejects(runCutout(svgDir, svgConfig), /SVG\/vector input/);
     assert.equal(
       await exists(join(svgDir, 'project.json')),
       false,
@@ -543,7 +543,7 @@ test('the cutout example rejects malformed configs, taints simulated sprites and
         shots: oneShot,
       }),
     );
-    await assert.rejects(runCutout(rightsDir, rightsConfig), 'the example must reject malformed rights');
+    await assert.rejects(runCutout(rightsDir, rightsConfig), /"rights",\s*"redistributable"/);
     assert.equal(await exists(join(rightsDir, 'project.json')), false);
 
     // (c) a shot referencing an unregistered sprite variant must be refused.
@@ -561,7 +561,7 @@ test('the cutout example rejects malformed configs, taints simulated sprites and
         shots: [{ frames: 4, from: pose, to: pose, sprite: 'ghost' }],
       }),
     );
-    await assert.rejects(runCutout(variantDir, variantConfig), 'the example must reject an unknown sprite variant');
+    await assert.rejects(runCutout(variantDir, variantConfig), /"ghost" does not match any configured asset/);
     assert.equal(await exists(join(variantDir, 'project.json')), false);
 
     // (d) an existing target directory must not be overwritten.
@@ -581,7 +581,7 @@ test('the cutout example rejects malformed configs, taints simulated sprites and
     );
     await runCutout(keepDir, keepConfig);
     const authored = await hashFile(join(keepDir, 'project.json'));
-    await assert.rejects(runCutout(keepDir, keepConfig), 'the example must refuse to overwrite existing work');
+    await assert.rejects(runCutout(keepDir, keepConfig), /refusing to overwrite existing path/i);
     assert.equal(await hashFile(join(keepDir, 'project.json')), authored, 'the existing project must be untouched');
 
     // (e) a simulated sprite taints the genuine code Result, and a decode failure
@@ -621,7 +621,7 @@ test('the cutout example rejects malformed configs, taints simulated sprites and
     };
     onDisk.assets.find(asset => asset.id === 'sprite')!.sha256 = corruptedHash;
     await writeFile(join(simDir, 'project.json'), `${JSON.stringify(onDisk, null, 2)}\n`);
-    await assert.rejects(buildProject(simDir), 'a binding image that cannot decode must fail the Build');
+    await assert.rejects(buildProject(simDir), /source image (?:cannot|could not) be decoded|zero natural dimensions/i);
     assert.equal(
       await readFile(resultPath, 'utf8'),
       active,

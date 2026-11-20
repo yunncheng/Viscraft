@@ -131,10 +131,20 @@ async function makeVfr(dir: string, name: string): Promise<string> {
     '[v]',
     '-c:v',
     'libx264',
+    // Keep all 30 presentation samples on the explicit source clock. B-frame
+    // reordering can otherwise introduce an MP4 edit that trims the last one.
+    '-bf',
+    '0',
     '-pix_fmt',
     'yuv420p',
     '-fps_mode',
-    'vfr',
+    'passthrough',
+    '-enc_time_base',
+    '1:1000000',
+    '-video_track_timescale',
+    '1000000',
+    '-use_editlist',
+    '0',
     out,
   ]);
   return out;
@@ -303,6 +313,14 @@ test('analyzeReference detects variable frame rate and resolves the end from dur
     assert.equal(report.media.frames, 30);
     assert.deepEqual(report.clock.timeBase, { numerator: 1, denominator: 1000000 });
     assert.equal(report.clock.variableFrameRate, true, 'unequal PTS deltas must be detected exactly');
+    const stamps = [
+      ...Array.from({ length: 10 }, (_, i) => i * 100000),
+      ...Array.from({ length: 20 }, (_, i) => 1000000 + i * 50000),
+    ];
+    assert.deepEqual(
+      report.frames.map(frame => frame.pts),
+      stamps.map(String),
+    );
     const probe = JSON.parse(
       await runCommand('ffprobe', [
         '-v',
@@ -310,19 +328,20 @@ test('analyzeReference detects variable frame rate and resolves the end from dur
         '-select_streams',
         'v:0',
         '-show_entries',
-        'frame=duration,pkt_duration',
+        'frame=duration,pkt_duration:stream=avg_frame_rate',
         '-of',
         'json',
         nodePath.join(refs, 'vfr.mp4'),
       ]),
-    ) as { frames: Array<{ duration?: number; pkt_duration?: number }> };
+    ) as { frames: Array<{ duration?: number; pkt_duration?: number }>; streams: Array<{ avg_frame_rate: string }> };
     const finalFrame = probe.frames.at(-1)!;
     const duration = Number(finalFrame.pkt_duration ?? finalFrame.duration ?? 0);
-    const expectedEnd = duration > 0 ? 1950000 + duration : 2020000;
+    const [rate, rateScale] = probe.streams[0].avg_frame_rate.split('/').map(Number);
+    const lastFrameSpan = duration > 0 ? duration : Math.round((1000000 * rateScale) / rate);
+    const expectedEnd = 1950000 + lastFrameSpan;
     const expectedFrames = Math.floor((expectedEnd * 25 + 500000) / 1000000);
     assert.equal(report.clock.durationMethod, duration > 0 ? 'source-duration' : 'frame-rate-fallback');
     assert.equal(report.clock.originPts, '0');
-    // If no duration is exposed, 1/avg_fps supplies 70000 ticks after the last PTS.
     assert.equal(report.clock.endPts, String(expectedEnd));
     assert.equal(report.frames[1].outputFrame, 3, '100000 ticks = 2.5 output frames half-up');
     assert.equal(report.cuts[0].outputFrame, 25);
@@ -371,7 +390,7 @@ test('analyzeReference rejects unsafe, symlinked, and missing reference paths', 
     await assert.rejects(() => analyzeReference(root, '../escape.mp4'), /safe project-relative path/i);
     await assert.rejects(() => analyzeReference(root, '/etc/passwd'), /safe project-relative path/i);
     await assert.rejects(() => analyzeReference(root, 'refs/missing.mp4'), /not readable/i);
-    await assert.rejects(() => analyzeReference(root, 'C:\\windows\\evil.mp4'));
+    await assert.rejects(() => analyzeReference(root, 'C:\\windows\\evil.mp4'), /safe project-relative path/i);
 
     const link = nodePath.join(refs, 'link.mp4');
     await t.test('file symlink is refused', async t => {

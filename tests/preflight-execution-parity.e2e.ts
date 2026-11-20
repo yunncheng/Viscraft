@@ -356,7 +356,7 @@ test('a picture layer whose selected Take artifact is missing is refused before 
       const take = first.takes.find(entry => entry.asset === 'silent')!;
       const artifact = first.artifacts.find(entry => entry.id === take.artifact)!;
       await rm(join(root, artifact.path), { force: true });
-      await assert.rejects(stat(join(root, artifact.path)), 'the artifact file must be gone');
+      await assert.rejects(stat(join(root, artifact.path)), { code: 'ENOENT' });
 
       // Now a project whose LAYER selects that Take, over a provider base picture.
       await writeProject(

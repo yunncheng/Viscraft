@@ -4,22 +4,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {
-  captureCode,
-  findBrowser,
-  checkCaptureReady,
-  isAllowedCaptureUrl,
-  type CaptureLifecycle,
-} from '../src/backends/browser/capture.js';
+import { captureCode, findBrowser, checkCaptureReady, type CaptureLifecycle } from '../src/backends/browser/capture.js';
 import http from 'node:http';
 import type { BrowserPictureSource } from '../src/core/schema.js';
 
 test('capture readiness renders a real frame without any HTTP listener', async context => {
-  context.mock.method(http.Server.prototype, 'listen', () => {
+  const listen = context.mock.method(http.Server.prototype, 'listen', () => {
     throw Object.assign(new Error('denied listener'), { code: 'EPERM' });
   });
-  const result = await checkCaptureReady();
-  assert.match(result.browserVersion, /Chrome/);
+  await checkCaptureReady();
+  assert.equal(listen.mock.callCount(), 0);
 });
 
 test('capture readiness fails when the browser executable is denied or missing', async () => {
@@ -204,18 +198,18 @@ test('captureCode renders a deterministic frame sequence and serves resources/bi
     'index.html': authorHtml({ seed: 7, marker: 'mk', checkResource: true, checkBinding: true }),
     'assets/dot.png': Buffer.from(TINY_PNG_BASE64, 'base64'),
     'assets/bind.png': Buffer.from(TINY_PNG_BASE64, 'base64'),
+    'assets/declared.json': '{}',
   });
   const destination = await fs.mkdtemp(path.join(os.tmpdir(), 'viscraft-out-'));
   try {
-    const result = await captureCode(
-      root,
-      codeSource({ frames: 3, seed: 7, params: { marker: 'mk' }, resources: ['assets/dot.png'] }),
-      OUTPUT,
-      destination,
-      { hero: { id: 'hero', path: 'assets/bind.png', sha256: '0'.repeat(64) } },
-    );
-    assert.equal(typeof result.browserVersion, 'string');
-    assert.ok(result.browserVersion.length > 0);
+    const source = codeSource({
+      frames: 3,
+      seed: 7,
+      params: { marker: 'mk' },
+      resources: ['assets/dot.png', 'assets/declared.json'],
+    });
+    const bindings = { hero: { id: 'hero', path: 'assets/bind.png', sha256: '0'.repeat(64) } };
+    await captureCode(root, source, OUTPUT, destination, bindings);
 
     const files = await frameFiles(destination);
     assert.deepEqual(files, ['frame-000000.png', 'frame-000001.png', 'frame-000002.png']);
@@ -227,12 +221,18 @@ test('captureCode renders a deterministic frame sequence and serves resources/bi
     // Per-frame pixels differ, proving render ran once per frame with a changing arg.
     assert.notEqual(contents[0].toString('hex'), contents[1].toString('hex'));
     assert.notEqual(contents[1].toString('hex'), contents[2].toString('hex'));
+
+    // The capture must verify this declared input even when the page never fetches it.
+    await fs.unlink(path.join(root, 'assets/declared.json'));
+    const incomplete = path.join(destination, 'incomplete');
+    await assert.rejects(captureCode(root, source, OUTPUT, incomplete, bindings), /declared\.json/);
+    assert.deepEqual(await frameFiles(incomplete), []);
   } finally {
     await cleanup(root, destination);
   }
 });
 
-test('captureCode fails on a page error and writes no completed garbage', async () => {
+test('captureCode stops writing frames at the first page error', async () => {
   const root = await makeProject({ 'index.html': authorHtml({ marker: 'mk', failAtFrame: 1 }) });
   const destination = await fs.mkdtemp(path.join(os.tmpdir(), 'viscraft-out-'));
   try {
@@ -240,6 +240,7 @@ test('captureCode fails on a page error and writes no completed garbage', async 
       captureCode(root, codeSource({ frames: 3, params: { marker: 'mk' } }), OUTPUT, destination),
       /boom at 1|page error/i,
     );
+    assert.deepEqual(await frameFiles(destination), ['frame-000000.png']);
   } finally {
     await cleanup(root, destination);
   }
@@ -253,7 +254,7 @@ test('captureCode fails on a missing project resource (HTTP 404)', async () => {
   try {
     await assert.rejects(
       captureCode(root, codeSource({ params: { marker: 'mk' } }), OUTPUT, destination),
-      /404|failed/i,
+      /missing\.png/,
     );
   } finally {
     await cleanup(root, destination);
@@ -276,7 +277,7 @@ test('captureCode blocks external network requests', async () => {
 });
 
 test('captureCode compiles a TypeScript entry and reports a missing contract honestly', async () => {
-  // A `.ts` entry is a supported authoring form now (see typescript-entry.test.ts).
+  // A `.ts` entry is a supported authoring form now (see typescript-entry.e2e.ts).
   // An entry that never exposes the contract global must name the real problem
   // rather than a bogus "unsupported TypeScript" refusal.
   const root = await makeProject({ 'scene.ts': 'export {};' });
@@ -318,21 +319,6 @@ test('captureCode rejects symlinked entry paths (shared io policy)', async t => 
   }
 });
 
-test('isAllowedCaptureUrl uses exact origin, not a prefix match', () => {
-  const origin = 'http://127.0.0.1:12345';
-  assert.equal(isAllowedCaptureUrl('http://127.0.0.1:12345/index.html', origin), true);
-  assert.equal(isAllowedCaptureUrl('http://127.0.0.1:12345/assets/a.png', origin), true);
-  assert.equal(isAllowedCaptureUrl('http://127.0.0.1:12345@evil.example/x.png', origin), false);
-  assert.equal(isAllowedCaptureUrl('http://127.0.0.1:12345.evil.example/x.png', origin), false);
-  assert.equal(isAllowedCaptureUrl('http://127.0.0.1:9999/index.html', origin), false);
-  assert.equal(isAllowedCaptureUrl('https://example.com/x.png', origin), false);
-  assert.equal(isAllowedCaptureUrl('data:image/png;base64,AAAA', origin), true);
-  assert.equal(isAllowedCaptureUrl('blob:http://127.0.0.1:12345/abc', origin), true);
-  assert.equal(isAllowedCaptureUrl('about:blank', origin), true);
-  assert.equal(isAllowedCaptureUrl('', origin), true);
-  assert.equal(isAllowedCaptureUrl('not a url', origin), false);
-});
-
 test('captureCode fails on a served-but-broken image after readiness', async () => {
   const root = await makeProject({
     'index.html': authorHtml({ marker: 'mk', probeImage: 'assets/broken.png' }),
@@ -360,8 +346,7 @@ test('captureCode does not hang when dispose never settles', async () => {
   const prev = process.env.VISCRAFT_CAPTURE_DISPOSE_TIMEOUT_MS;
   process.env.VISCRAFT_CAPTURE_DISPOSE_TIMEOUT_MS = '150';
   try {
-    const result = await captureCode(root, codeSource({ frames: 1, params: { marker: 'mk' } }), OUTPUT, destination);
-    assert.equal(typeof result.browserVersion, 'string');
+    await captureCode(root, codeSource({ frames: 1, params: { marker: 'mk' } }), OUTPUT, destination);
     const files = await frameFiles(destination);
     assert.deepEqual(files, ['frame-000000.png']);
   } finally {
@@ -456,8 +441,7 @@ test('captureCode lifecycle hooks record real keyboard input that changes pixels
   };
 
   try {
-    const result = await captureCode(root, codeSource({ frames: 2, params: {} }), OUTPUT, destination, {}, lifecycle);
-    assert.equal(typeof result.browserVersion, 'string');
+    await captureCode(root, codeSource({ frames: 2, params: {} }), OUTPUT, destination, {}, lifecycle);
 
     // Hooks ran in exactly the expected order for each exact frame.
     assert.deepEqual(order, ['prepare', 'beforeFrame:0', 'afterFrame:0', 'beforeFrame:1', 'afterFrame:1']);

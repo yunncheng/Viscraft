@@ -935,7 +935,7 @@ test('ROUTE 2 (simulated): recorded replay Take is used directly (no generation 
         /signature does not match|do not exactly match/i,
       );
 
-      // 6. Refusal (playable.test.ts idiom): a tampered source file after recording
+      // 6. Refusal (playable.e2e.ts idiom): a tampered source file after recording
       // is refused before any capture, and R1 stays byte-identical.
       const r2Rel = `recordings/${R2.id}/session.json`;
       const game2 = await readFile(join(root, 'game2.html'), 'utf8');

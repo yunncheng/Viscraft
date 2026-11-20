@@ -724,15 +724,12 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
       configDir: string,
       config: AuthorConfig,
       label: string,
+      reason: RegExp,
     ): Promise<void> => {
       const configPath = join(configDir, `${label}.config.json`);
       await writeJson(configPath, config);
-      await assert.rejects(runAuthor(projectDir, configPath), `expected a refusal for: ${label}`);
-      assert.equal(
-        await exists(join(projectDir, 'project.json')),
-        false,
-        `no project.json may be written for: ${label}`,
-      );
+      await assert.rejects(runAuthor(projectDir, configPath), reason, label);
+      assert.equal(await exists(projectDir), false, `no destination may be created for: ${label}`);
     };
 
     // (a) A tampered audio file no longer matches the report hash.
@@ -746,6 +743,7 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
       tamperDir,
       baseConfig({ report: 'report.json', audio: 'pulses.wav' }),
       'tampered',
+      /sha256 does not match report\.source\.sha256/,
     );
 
     // (b) Incompatible fps: the report was mapped onto a different fps than the output.
@@ -760,6 +758,7 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
         selectedOnsetSamples: onsetsInside(fpsFixture.report, IN_FRAME, OUT_FRAME).map(onset => onset.sample),
       }),
       'fps',
+      /output\.fps must equal the report fps/,
     );
 
     // (c) Incompatible sample rate: report analyzed at 44.1 kHz, output at 48 kHz.
@@ -774,6 +773,7 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
         selectedOnsetSamples: onsetsInside(rateFixture.report, IN_FRAME, OUT_FRAME).map(onset => onset.sample),
       }),
       'rate',
+      /output\.sampleRate .* must equal the report sampleRate/,
     );
 
     // (d) An unknown selected onset (inside the trim but not a reported onset).
@@ -786,6 +786,7 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
         selectedOnsetSamples: [report.onsets[0].sample + 1920],
       }),
       'unknown',
+      /selected onset sample .* is not present in the report/,
     );
 
     // (e) An actual reported onset outside the chosen trim.
@@ -801,6 +802,7 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
         selectedOnsetSamples: [report.onsets[0].sample],
       }),
       'bounds',
+      /selected onset sample .* outside the trimmed interval/,
     );
 
     // (f) Invalid cuts: below the trim start, beyond the trim end, and non-increasing.
@@ -809,18 +811,21 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
       fixtures,
       baseConfig({ report: 'report.json', audio: 'pulses.wav', cuts: [2, 20] }),
       'cut-low',
+      /cuts must strictly increase inside/,
     );
     await refused(
       join(root, 'cut-high-project'),
       fixtures,
       baseConfig({ report: 'report.json', audio: 'pulses.wav', cuts: [12, 40] }),
       'cut-high',
+      /cut 40 must be strictly inside/,
     );
     await refused(
       join(root, 'cut-order-project'),
       fixtures,
       baseConfig({ report: 'report.json', audio: 'pulses.wav', cuts: [20, 12] }),
       'cut-order',
+      /cuts must strictly increase inside/,
     );
 
     // (g) A non-PCM-WAV source is refused, never silently reinterpreted.
@@ -830,13 +835,19 @@ test('the example refuses tampered, incompatible or out-of-range evidence before
       join(mp4Dir, 'audio.mp4'),
       Buffer.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]),
     );
-    await refused(join(root, 'mp4-project'), mp4Dir, baseConfig({ report: 'report.json', audio: 'audio.mp4' }), 'mp4');
+    await refused(
+      join(root, 'mp4-project'),
+      mp4Dir,
+      baseConfig({ report: 'report.json', audio: 'audio.mp4' }),
+      'mp4',
+      /not a RIFF\/WAVE file/,
+    );
 
     // (h) An existing target path is never overwritten.
     const keepDir = join(root, 'keep-project');
     await runAuthor(keepDir, goodConfig);
     const authoredHash = await hashFile(join(keepDir, 'project.json'));
-    await assert.rejects(runAuthor(keepDir, goodConfig), 'the example must refuse to overwrite existing work');
+    await assert.rejects(runAuthor(keepDir, goodConfig), /refusing to overwrite existing path/i);
     assert.equal(await hashFile(join(keepDir, 'project.json')), authoredHash, 'the existing project must be untouched');
 
     // (i) The authored project claims no provider and no fabricated provenance.

@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as nodePath from 'node:path';
+import { ZodError } from 'zod';
 
 import {
   findSubtitleFont,
@@ -296,9 +297,12 @@ test('renderSubtitles validates captions through the shared schema', async () =>
   try {
     const fixture = await makeFixture(dir, 'fixture.mp4', FPS_30);
     const font = await findSubtitleFont();
-    await assert.rejects(() =>
-      renderSubtitles(fixture, [{ ...subtitle(), color: 'red' }], output(FPS_30), nodePath.join(dir, 'x.mp4'), font),
+    const destination = nodePath.join(dir, 'x.mp4');
+    await assert.rejects(
+      () => renderSubtitles(fixture, [subtitle({ color: 'red' })], output(FPS_30), destination, font),
+      error => error instanceof ZodError && error.issues.some(issue => issue.path.join('.') === 'color'),
     );
+    await assert.rejects(fs.stat(destination), { code: 'ENOENT' });
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -406,6 +410,7 @@ test('SubtitleSchema rejects invalid color, intervals, size and text', () => {
   assert.equal(SubtitleSchema.safeParse({ ...base, text: '' }).success, false);
   assert.equal(SubtitleSchema.safeParse({ ...base, text: 'a\u0000b' }).success, false);
   assert.equal(SubtitleSchema.safeParse({ ...base, fontSize: 0 }).success, false);
+  assert.equal(SubtitleSchema.safeParse({ ...base, fontSize: 513 }).success, false);
 });
 
 test('findSubtitleFont returns an absolute readable font and its sha256', async () => {

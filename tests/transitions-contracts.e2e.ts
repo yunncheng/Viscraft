@@ -233,7 +233,7 @@ async function clipsFor(paths: string[], secondStart: number): Promise<ComposeCl
 test('TransitionSchema accepts every bounded kind and rejects unknown kinds and wrong shapes', () => {
   // The generic loops below exercise the 14 xfade/smear kinds. `occlude` is
   // also part of the bounded kind set but needs an occluder Asset, so it is
-  // covered by tests/occlude.test.ts instead.
+  // covered by tests/occlude-contracts.e2e.ts instead.
   assert.deepEqual(
     TransitionKindSchema.options,
     [...ALL_KINDS, 'occlude'],

@@ -358,11 +358,6 @@ test('type-chart module: CJK-aware text, chart math and staged reveal are correc
   assert.equal(mod.revealProgress(11, { frames: 12 }), 1);
   const rp = [0, 1, 2, 3].map(f => mod.revealProgress(f, { frames: 12 }));
   for (let i = 1; i < rp.length; i++) assert.ok(rp[i] >= rp[i - 1], 'reveal is monotone');
-  assert.equal(
-    mod.revealProgress(3, { frames: 12 }),
-    mod.revealProgress(3, { frames: 12 }),
-    'same frame, same progress',
-  );
   assert.throws(() => mod.revealProgress(Number.NaN, { frames: 12 }), /frame/);
 
   assert.equal(mod.calloutFrame(0, 0.35), null, 'annotation waits for its start');
@@ -544,20 +539,3 @@ test('rendering is deterministic: the same frame is byte-identical and sampling 
 // ---------------------------------------------------------------------------
 // A missing declared resource fails loudly — never a blank successful frame.
 // ---------------------------------------------------------------------------
-test('a missing declared resource fails the capture loudly', async () => {
-  const root = await authorFixture();
-  try {
-    const resources = [...RESOURCES, 'chart-data.mjs'];
-    await assert.rejects(
-      openCodeScene(
-        root,
-        { entry: ENTRY, resources },
-        { width: 64, height: 64 },
-        { label: 'captureCode', globalName: 'viscraft' },
-      ),
-      (error: unknown) => /chart-data\.mjs|ENOENT|no such file/i.test(String((error as Error)?.message ?? error)),
-    );
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
